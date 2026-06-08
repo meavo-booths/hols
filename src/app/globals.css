@@ -15,9 +15,9 @@ body {
 
 .fc {
   --fc-border-color: #e2e8f0;
-  --fc-button-bg-color: #0284c7;
-  --fc-button-border-color: #0284c7;
-  --fc-button-hover-bg-color: #0369a1;
-  --fc-button-hover-border-color: #0369a1;
-  --fc-today-bg-color: #f0f9ff;
+  --fc-button-bg-color: #30A46C;
+  --fc-button-border-color: #30A46C;
+  --fc-button-hover-bg-color: #0C8F61;
+  --fc-button-hover-border-color: #0C8F61;
+  --fc-today-bg-color: #f0fdf4;
 }

@@ -84,7 +84,7 @@ export function VacationCalendar({
               extendedProps: info.event.extendedProps as CalendarEvent["extendedProps"],
             });
           }}
-          eventColor="#0284c7"
+          eventColor="#30A46C"
         />
       </Card>
 
