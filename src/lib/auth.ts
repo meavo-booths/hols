@@ -1,6 +1,7 @@
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import { SystemRole } from "@prisma/client";
+import { authConfig } from "@/lib/auth.config";
 import { prisma } from "@/lib/prisma";
 import { verifyPassword } from "@/lib/password";
 
@@ -10,6 +11,7 @@ const adminEmails = (process.env.ADMIN_EMAILS ?? "")
   .filter(Boolean);
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
+  ...authConfig,
   session: { strategy: "jwt" },
   providers: [
     Credentials({
@@ -44,17 +46,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       },
     }),
   ],
-  pages: {
-    signIn: "/login",
-  },
-  trustHost: true,
   callbacks: {
-    authorized({ auth, request }) {
-      const isLoggedIn = !!auth?.user;
-      const isLoginPage = request.nextUrl.pathname.startsWith("/login");
-      if (isLoginPage) return true;
-      return isLoggedIn;
-    },
+    ...authConfig.callbacks,
     async jwt({ token, user }) {
       if (user?.id) {
         token.id = user.id;

@@ -76,7 +76,13 @@ export function VacationCalendar({
           events={fetchEvents}
           height="auto"
           eventClick={(info) => {
-            setSelected(info.event.toPlainObject() as CalendarEvent);
+            setSelected({
+              id: info.event.id,
+              title: info.event.title,
+              start: info.event.startStr,
+              end: info.event.endStr,
+              extendedProps: info.event.extendedProps as CalendarEvent["extendedProps"],
+            });
           }}
           eventColor="#0284c7"
         />
