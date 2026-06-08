@@ -21,11 +21,11 @@ export async function createUser(formData: FormData): Promise<void> {
   const name = (formData.get("name") as string)?.trim() || null;
   const password = formData.get("password") as string;
   const makeAdmin = formData.get("makeAdmin") === "on";
-  const teamId = (formData.get("teamId") as string) || "";
+  const teamId = formData.get("teamId") as string;
   const role =
     (formData.get("role") as string) === "MANAGER" ? TeamRole.MANAGER : TeamRole.MEMBER;
 
-  if (!email) return;
+  if (!email || !teamId) return;
   if (!password || password.length < 8) return;
 
   const existing = await prisma.user.findUnique({ where: { email } });
@@ -43,14 +43,13 @@ export async function createUser(formData: FormData): Promise<void> {
       },
     });
 
-    if (teamId) {
-      await tx.teamMember.create({
-        data: { userId: user.id, teamId, role },
-      });
-    }
+    await tx.teamMember.create({
+      data: { userId: user.id, teamId, role },
+    });
   });
 
   revalidatePath("/admin");
+  revalidatePath("/");
 }
 
 export async function deleteUser(userId: string): Promise<void> {
@@ -148,26 +147,24 @@ export async function updateTeamAllowance(
   revalidatePath("/");
 }
 
-export async function addTeamMember(formData: FormData): Promise<void> {
+export async function changeUserTeam(formData: FormData): Promise<void> {
   await requireAdmin();
-  const email = (formData.get("email") as string)?.trim().toLowerCase();
+  const userId = formData.get("userId") as string;
   const teamId = formData.get("teamId") as string;
-  const role = (formData.get("role") as string) === "MANAGER" ? TeamRole.MANAGER : TeamRole.MEMBER;
+  const role =
+    (formData.get("role") as string) === "MANAGER" ? TeamRole.MANAGER : TeamRole.MEMBER;
 
-  if (!email || !teamId) return;
+  if (!userId || !teamId) return;
 
-  const user = await prisma.user.findUnique({ where: { email } });
-  if (!user) return;
-
-  try {
-    await prisma.teamMember.create({
-      data: { userId: user.id, teamId, role },
+  await prisma.$transaction(async (tx) => {
+    await tx.teamMember.deleteMany({ where: { userId } });
+    await tx.teamMember.create({
+      data: { userId, teamId, role },
     });
-  } catch {
-    return;
-  }
+  });
 
   revalidatePath("/admin");
+  revalidatePath("/");
 }
 
 export async function removeTeamMember(memberId: string): Promise<void> {

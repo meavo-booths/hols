@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { getRemainingDays } from "@/lib/allowance";
 import { getManagedTeamIds, isAdmin } from "@/lib/permissions";
 import {
-  addTeamMember,
+  changeUserTeam,
   clearUserAllowance,
   createTeam,
   createUser,
@@ -51,7 +51,15 @@ export default async function AdminPage() {
         }),
         prisma.user.findMany({
           orderBy: { name: "asc" },
-          select: { id: true, name: true, email: true },
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            teamMemberships: {
+              orderBy: { createdAt: "asc" },
+              select: { teamId: true, role: true, team: { select: { name: true } } },
+            },
+          },
         }),
       ])
     : [[], []];
@@ -86,37 +94,36 @@ export default async function AdminPage() {
               <p className="mt-1 text-sm text-slate-500">
                 Add employee accounts with email and password.
               </p>
-              <form action={createUser} className="mt-4 space-y-4">
-                <Input label="Email" name="email" type="email" required />
-                <Input label="Name" name="name" placeholder="Jane Smith" />
-                <Input
-                  label="Password"
-                  name="password"
-                  type="password"
-                  required
-                  autoComplete="new-password"
-                />
-                <Select
-                  label="Team"
-                  name="teamId"
-                  defaultValue=""
-                  options={[{ value: "", label: "— No team —" }, ...teamOptions]}
-                />
-                <Select
-                  label="Team role"
-                  name="role"
-                  defaultValue="MEMBER"
-                  options={[
-                    { value: "MEMBER", label: "Member" },
-                    { value: "MANAGER", label: "Manager" },
-                  ]}
-                />
-                <label className="flex items-center gap-2 text-sm text-slate-700">
-                  <input type="checkbox" name="makeAdmin" className="rounded border-slate-300" />
-                  Grant admin access
-                </label>
-                <Button type="submit">Create user</Button>
-              </form>
+              {teamOptions.length === 0 ? (
+                <p className="mt-4 text-sm text-amber-700">Create a team before adding users.</p>
+              ) : (
+                <form action={createUser} className="mt-4 space-y-4">
+                  <Input label="Email" name="email" type="email" required />
+                  <Input label="Name" name="name" placeholder="Jane Smith" />
+                  <Input
+                    label="Password"
+                    name="password"
+                    type="password"
+                    required
+                    autoComplete="new-password"
+                  />
+                  <Select label="Team" name="teamId" required options={teamOptions} />
+                  <Select
+                    label="Team role"
+                    name="role"
+                    defaultValue="MEMBER"
+                    options={[
+                      { value: "MEMBER", label: "Member" },
+                      { value: "MANAGER", label: "Manager" },
+                    ]}
+                  />
+                  <label className="flex items-center gap-2 text-sm text-slate-700">
+                    <input type="checkbox" name="makeAdmin" className="rounded border-slate-300" />
+                    Grant admin access
+                  </label>
+                  <Button type="submit">Create user</Button>
+                </form>
+              )}
             </Card>
 
             <Card>
@@ -136,26 +143,6 @@ export default async function AdminPage() {
               </form>
             </Card>
 
-            <Card>
-              <h2 className="text-lg font-semibold text-slate-900">Add team member</h2>
-              <p className="mt-1 text-sm text-slate-500">
-                Assign an existing user to a team.
-              </p>
-              <form action={addTeamMember} className="mt-4 space-y-4">
-                <Input label="Email" name="email" type="email" required />
-                <Select label="Team" name="teamId" required options={teamOptions} />
-                <Select
-                  label="Role"
-                  name="role"
-                  defaultValue="MEMBER"
-                  options={[
-                    { value: "MEMBER", label: "Member" },
-                    { value: "MANAGER", label: "Manager" },
-                  ]}
-                />
-                <Button type="submit">Add member</Button>
-              </form>
-            </Card>
           </div>
 
           <Card>
@@ -166,13 +153,42 @@ export default async function AdminPage() {
               <ul className="mt-4 divide-y divide-slate-100">
                 {users.map((user) => {
                   const label = user.name ? `${user.name} (${user.email})` : user.email;
+                  const membership = user.teamMemberships[0];
+                  const currentTeamLabel = membership
+                    ? `${membership.team.name} (${membership.role === "MANAGER" ? "Manager" : "Member"})`
+                    : "No team";
                   return (
                     <li
                       key={user.id}
                       className="flex flex-wrap items-center justify-between gap-4 py-3"
                     >
-                      <span className="text-sm">{label}</span>
+                      <div className="text-sm">
+                        <p>{label}</p>
+                        <p className="text-slate-500">{currentTeamLabel}</p>
+                      </div>
                       <div className="flex flex-wrap items-end gap-2">
+                        <form action={changeUserTeam} className="flex items-end gap-2">
+                          <input type="hidden" name="userId" value={user.id} />
+                          <Select
+                            label="Team"
+                            name="teamId"
+                            required
+                            defaultValue={membership?.teamId ?? teamOptions[0]?.value}
+                            options={teamOptions}
+                          />
+                          <Select
+                            label="Role"
+                            name="role"
+                            defaultValue={membership?.role ?? "MEMBER"}
+                            options={[
+                              { value: "MEMBER", label: "Member" },
+                              { value: "MANAGER", label: "Manager" },
+                            ]}
+                          />
+                          <Button type="submit" variant="secondary">
+                            Change team
+                          </Button>
+                        </form>
                         <form action={resetUserPassword} className="flex items-end gap-2">
                           <input type="hidden" name="userId" value={user.id} />
                           <Input
