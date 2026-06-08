@@ -9,6 +9,7 @@ const links = [
   { href: "/requests", label: "My requests" },
   { href: "/approvals", label: "Approvals", managerOnly: true },
   { href: "/admin", label: "Admin" },
+  { href: "/profile", label: "Account" },
 ];
 
 export async function Nav() {
