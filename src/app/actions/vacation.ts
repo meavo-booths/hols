@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { parseDateInput } from "@/lib/dates";
 import { validateRequestDays } from "@/lib/allowance";
 import { canReviewRequest } from "@/lib/permissions";
+import { notifySlackNewVacationRequest } from "@/lib/slack";
 
 async function requireUser() {
   const session = await auth();
@@ -22,7 +23,7 @@ export async function createVacationRequest(formData: FormData) {
   const validation = await validateRequestDays(user.id, startDate, endDate);
   if (!validation.ok) return { error: validation.error };
 
-  await prisma.vacationRequest.create({
+  const request = await prisma.vacationRequest.create({
     data: {
       userId: user.id,
       startDate,
@@ -30,6 +31,10 @@ export async function createVacationRequest(formData: FormData) {
       days: validation.days,
       note,
     },
+  });
+
+  void notifySlackNewVacationRequest(request.id).catch((err) => {
+    console.error("Slack notification failed:", err);
   });
 
   revalidatePath("/");
