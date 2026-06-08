@@ -8,7 +8,7 @@ const links = [
   { href: "/", label: "Calendar" },
   { href: "/requests", label: "My requests" },
   { href: "/approvals", label: "Approvals", managerOnly: true },
-  { href: "/admin", label: "Admin", adminOnly: true },
+  { href: "/admin", label: "Admin" },
 ];
 
 export async function Nav() {
@@ -36,7 +36,7 @@ export async function Nav() {
           <nav className="flex gap-1">
             {links
               .filter((link) => {
-                if (link.adminOnly && !isAdmin) return false;
+                if (link.href === "/admin" && !isAdmin && !isManager) return false;
                 if (link.managerOnly && !isManager && !isAdmin) return false;
                 return true;
               })
