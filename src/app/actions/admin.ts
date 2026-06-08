@@ -6,6 +6,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { hashPassword } from "@/lib/password";
 import { isAdmin } from "@/lib/permissions";
+import { DEFAULT_TEAM_COLOR, isValidTeamColor } from "@/lib/team-colors";
 
 async function requireAdmin() {
   const session = await auth();
@@ -93,17 +94,20 @@ export async function createTeam(formData: FormData): Promise<void> {
   await requireAdmin();
   const name = (formData.get("name") as string)?.trim();
   const yearlyAllowance = Number(formData.get("yearlyAllowance"));
+  const colorInput = (formData.get("color") as string) ?? DEFAULT_TEAM_COLOR;
+  const color = isValidTeamColor(colorInput) ? colorInput : DEFAULT_TEAM_COLOR;
 
   if (!name) return;
   if (!Number.isFinite(yearlyAllowance) || yearlyAllowance < 0) return;
 
   try {
-    await prisma.team.create({ data: { name, yearlyAllowance } });
+    await prisma.team.create({ data: { name, yearlyAllowance, color } });
   } catch {
     return;
   }
 
   revalidatePath("/admin");
+  revalidatePath("/");
 }
 
 export async function updateTeamAllowance(

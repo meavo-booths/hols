@@ -4,6 +4,7 @@ import { useCallback, useState } from "react";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import interactionPlugin from "@fullcalendar/interaction";
+import { resolveTeamColor } from "@/lib/team-colors";
 import { Card } from "@/components/ui";
 
 type CalendarEvent = {
@@ -11,12 +12,16 @@ type CalendarEvent = {
   title: string;
   start: string;
   end: string;
+  backgroundColor?: string;
+  borderColor?: string;
+  textColor?: string;
   extendedProps: {
     userName: string | null;
     userEmail: string;
     teams: string;
     days: number;
     note: string | null;
+    color?: string;
   };
 };
 
@@ -24,7 +29,7 @@ export function VacationCalendar({
   teams,
   initialTeamId,
 }: {
-  teams: { id: string; name: string }[];
+  teams: { id: string; name: string; color: string }[];
   initialTeamId?: string;
 }) {
   const [teamId, setTeamId] = useState(initialTeamId ?? "");
@@ -63,6 +68,20 @@ export function VacationCalendar({
         </select>
       </div>
 
+      {teams.length > 0 && (
+        <div className="flex flex-wrap gap-4">
+          {teams.map((team) => (
+            <div key={team.id} className="flex items-center gap-2 text-sm text-slate-600">
+              <span
+                className="h-4 w-4 shrink-0 rounded"
+                style={{ backgroundColor: resolveTeamColor(team.color) }}
+              />
+              {team.name}
+            </div>
+          ))}
+        </div>
+      )}
+
       <Card className="p-4">
         <FullCalendar
           key={teamId}
@@ -81,18 +100,28 @@ export function VacationCalendar({
               title: info.event.title,
               start: info.event.startStr,
               end: info.event.endStr,
+              backgroundColor: info.event.backgroundColor,
+              borderColor: info.event.borderColor,
+              textColor: info.event.textColor,
               extendedProps: info.event.extendedProps as CalendarEvent["extendedProps"],
             });
           }}
-          eventColor="#30A46C"
         />
       </Card>
 
       {selected && (
         <Card>
-          <h3 className="font-semibold text-slate-900">
-            {selected.extendedProps.userName ?? selected.extendedProps.userEmail}
-          </h3>
+          <div className="flex items-center gap-2">
+            <span
+              className="h-4 w-4 shrink-0 rounded"
+              style={{
+                backgroundColor: resolveTeamColor(selected.extendedProps.color),
+              }}
+            />
+            <h3 className="font-semibold text-slate-900">
+              {selected.extendedProps.userName ?? selected.extendedProps.userEmail}
+            </h3>
+          </div>
           <dl className="mt-3 grid gap-2 text-sm text-slate-600">
             <div>
               <dt className="inline font-medium">Dates: </dt>

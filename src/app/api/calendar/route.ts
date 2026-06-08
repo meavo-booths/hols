@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { resolveTeamColor, TEAM_EVENT_TEXT_COLOR } from "@/lib/team-colors";
 
 export async function GET(request: Request) {
   const session = await auth();
@@ -37,7 +38,10 @@ export async function GET(request: Request) {
           id: true,
           name: true,
           email: true,
-          teamMemberships: { include: { team: true } },
+          teamMemberships: {
+            include: { team: true },
+            orderBy: { createdAt: "asc" },
+          },
         },
       },
     },
@@ -45,12 +49,21 @@ export async function GET(request: Request) {
   });
 
   const events = requests.map((req) => {
-    const teams = req.user.teamMemberships.map((m) => m.team.name).join(", ");
+    const memberships = req.user.teamMemberships;
+    const primaryMembership = teamId
+      ? memberships.find((m) => m.teamId === teamId) ?? memberships[0]
+      : memberships[0];
+    const color = resolveTeamColor(primaryMembership?.team.color);
+    const teams = memberships.map((m) => m.team.name).join(", ");
+
     return {
       id: req.id,
       title: `${req.user.name ?? req.user.email} — off`,
       start: req.startDate.toISOString().slice(0, 10),
       end: new Date(req.endDate.getTime() + 86400000).toISOString().slice(0, 10),
+      backgroundColor: color,
+      borderColor: color,
+      textColor: TEAM_EVENT_TEXT_COLOR,
       extendedProps: {
         userId: req.user.id,
         userName: req.user.name,
@@ -58,6 +71,7 @@ export async function GET(request: Request) {
         teams,
         days: req.days,
         note: req.note,
+        color,
       },
     };
   });

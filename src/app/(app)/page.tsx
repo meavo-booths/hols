@@ -15,7 +15,10 @@ export default async function HomePage() {
 
   const [balance, teams] = await Promise.all([
     getRemainingDays(userId, year),
-    prisma.team.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true } }),
+    prisma.team.findMany({
+      orderBy: { name: "asc" },
+      select: { id: true, name: true, color: true },
+    }),
   ]);
 
   return (

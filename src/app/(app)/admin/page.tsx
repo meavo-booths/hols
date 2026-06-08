@@ -14,6 +14,8 @@ import {
   updateTeamAllowance,
 } from "@/app/actions/admin";
 import { DeleteUserButton } from "@/components/delete-user-button";
+import { TeamColorPicker } from "@/components/team-color-picker";
+import { resolveTeamColor } from "@/lib/team-colors";
 import { Button, Card, Input, PageHeader, Select } from "@/components/ui";
 
 export default async function AdminPage() {
@@ -111,6 +113,7 @@ export default async function AdminPage() {
               min={0}
               required
             />
+            <TeamColorPicker />
             <Button type="submit">Create team</Button>
           </form>
         </Card>
@@ -228,7 +231,13 @@ export default async function AdminPage() {
           <Card key={team.id}>
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
-                <h2 className="text-lg font-semibold text-slate-900">{team.name}</h2>
+                <div className="flex items-center gap-2">
+                  <span
+                    className="h-5 w-5 shrink-0 rounded"
+                    style={{ backgroundColor: resolveTeamColor(team.color) }}
+                  />
+                  <h2 className="text-lg font-semibold text-slate-900">{team.name}</h2>
+                </div>
                 <p className="text-sm text-slate-500">
                   Default allowance: {team.yearlyAllowance} days/year
                 </p>

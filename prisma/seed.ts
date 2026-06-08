@@ -32,7 +32,7 @@ async function main() {
   const engineering = await prisma.team.upsert({
     where: { name: "Engineering" },
     update: {},
-    create: { name: "Engineering", yearlyAllowance: 25 },
+    create: { name: "Engineering", yearlyAllowance: 25, color: "#E1E9EC" },
   });
 
   await prisma.teamMember.upsert({
