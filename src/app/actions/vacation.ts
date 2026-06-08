@@ -77,7 +77,8 @@ export async function reviewVacationRequest(
     const validation = await validateRequestDays(
       request.userId,
       request.startDate,
-      request.endDate
+      request.endDate,
+      requestId
     );
     if (!validation.ok) return { error: validation.error };
   }
