@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { cancelVacationRequest } from "@/app/actions/vacation";
@@ -13,8 +14,9 @@ const statusTone = {
 
 export default async function RequestsPage() {
   const session = await auth();
+  if (!session?.user?.id) redirect("/login");
   const requests = await prisma.vacationRequest.findMany({
-    where: { userId: session!.user!.id },
+    where: { userId: session.user.id },
     include: { reviewedBy: { select: { name: true, email: true } } },
     orderBy: { createdAt: "desc" },
   });

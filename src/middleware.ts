@@ -4,8 +4,15 @@ import { authConfig } from "@/lib/auth.config";
 const { auth } = NextAuth(authConfig);
 
 export default auth((req) => {
+  const { pathname } = req.nextUrl;
+
+  // Never gate API routes — health checks, auth callbacks, etc.
+  if (pathname.startsWith("/api/")) {
+    return;
+  }
+
   const isLoggedIn = !!req.auth;
-  const isLoginPage = req.nextUrl.pathname.startsWith("/login");
+  const isLoginPage = pathname.startsWith("/login");
 
   if (!isLoggedIn && !isLoginPage) {
     return Response.redirect(new URL("/login", req.nextUrl));
@@ -16,5 +23,5 @@ export default auth((req) => {
 });
 
 export const config = {
-  matcher: ["/((?!api/auth|_next/static|_next/image|favicon.ico).*)"],
+  matcher: ["/((?!api|_next/static|_next/image|favicon.ico).*)"],
 };

@@ -1,6 +1,10 @@
 import type { NextAuthConfig } from "next-auth";
 
 export const authConfig = {
+  secret: process.env.AUTH_SECRET,
+  session: {
+    strategy: "jwt",
+  },
   pages: {
     signIn: "/login",
   },
@@ -8,8 +12,10 @@ export const authConfig = {
   trustHost: true,
   callbacks: {
     authorized({ auth, request }) {
+      const { pathname } = request.nextUrl;
+      if (pathname.startsWith("/api/")) return true;
       const isLoggedIn = !!auth?.user;
-      const isLoginPage = request.nextUrl.pathname.startsWith("/login");
+      const isLoginPage = pathname.startsWith("/login");
       if (isLoginPage) return true;
       return isLoggedIn;
     },

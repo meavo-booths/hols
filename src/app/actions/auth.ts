@@ -1,12 +1,14 @@
 "use server";
 
-import { redirect } from "next/navigation";
+import { AuthError } from "next-auth";
 import { signIn } from "@/lib/auth";
 
+type LoginState = { error?: string; ok?: boolean } | null;
+
 export async function loginAction(
-  _prev: { error?: string } | null,
+  _prev: LoginState,
   formData: FormData
-): Promise<{ error?: string } | null> {
+): Promise<LoginState> {
   const email = (formData.get("email") as string)?.trim().toLowerCase();
   const password = formData.get("password") as string;
 
@@ -14,15 +16,23 @@ export async function loginAction(
     return { error: "Email and password are required." };
   }
 
-  const result = await signIn("credentials", {
-    email,
-    password,
-    redirect: false,
-  });
+  try {
+    const result = await signIn("credentials", {
+      email,
+      password,
+      redirect: false,
+    });
 
-  if (result?.error) {
-    return { error: "Invalid email or password." };
+    if (result?.error) {
+      return { error: "Invalid email or password." };
+    }
+
+    return { ok: true };
+  } catch (error) {
+    if (error instanceof AuthError) {
+      return { error: "Invalid email or password." };
+    }
+    console.error("Login failed:", error);
+    return { error: "Something went wrong. Check that the database is set up." };
   }
-
-  redirect("/");
 }

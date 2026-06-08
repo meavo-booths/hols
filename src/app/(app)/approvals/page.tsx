@@ -8,7 +8,8 @@ import { toDateInputValue } from "@/lib/dates";
 
 export default async function ApprovalsPage() {
   const session = await auth();
-  const userId = session!.user!.id;
+  if (!session?.user?.id) redirect("/login");
+  const userId = session.user.id;
   const admin = await isAdmin(userId);
   const managedTeamIds = await getManagedTeamIds(userId);
 

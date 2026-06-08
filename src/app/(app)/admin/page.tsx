@@ -16,7 +16,8 @@ import { Button, Card, Input, PageHeader, Select } from "@/components/ui";
 
 export default async function AdminPage() {
   const session = await auth();
-  if (!(await isAdmin(session!.user!.id))) redirect("/");
+  if (!session?.user?.id) redirect("/login");
+  if (!(await isAdmin(session.user.id))) redirect("/");
 
   const year = new Date().getFullYear();
   const [teams, allowances, users] = await Promise.all([
