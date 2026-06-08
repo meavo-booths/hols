@@ -110,6 +110,28 @@ export async function createTeam(formData: FormData): Promise<void> {
   revalidatePath("/");
 }
 
+export async function updateTeam(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const teamId = formData.get("teamId") as string;
+  const name = (formData.get("name") as string)?.trim();
+  const colorInput = (formData.get("color") as string) ?? DEFAULT_TEAM_COLOR;
+  const color = isValidTeamColor(colorInput) ? colorInput : DEFAULT_TEAM_COLOR;
+
+  if (!teamId || !name) return;
+
+  try {
+    await prisma.team.update({
+      where: { id: teamId },
+      data: { name, color },
+    });
+  } catch {
+    return;
+  }
+
+  revalidatePath("/admin");
+  revalidatePath("/");
+}
+
 export async function updateTeamAllowance(
   teamId: string,
   yearlyAllowance: number
@@ -123,6 +145,7 @@ export async function updateTeamAllowance(
   });
 
   revalidatePath("/admin");
+  revalidatePath("/");
 }
 
 export async function addTeamMember(formData: FormData): Promise<void> {

@@ -11,6 +11,7 @@ import {
   removeTeamMember,
   resetUserPassword,
   setUserAllowance,
+  updateTeam,
   updateTeamAllowance,
 } from "@/app/actions/admin";
 import { DeleteUserButton } from "@/components/delete-user-button";
@@ -261,6 +262,20 @@ export default async function AdminPage() {
                 </Button>
               </form>
             </div>
+
+            <details className="mt-4 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
+              <summary className="cursor-pointer text-sm font-medium text-slate-700">
+                Edit team name &amp; colour
+              </summary>
+              <form action={updateTeam} className="mt-4 space-y-4">
+                <input type="hidden" name="teamId" value={team.id} />
+                <Input label="Team name" name="name" defaultValue={team.name} required />
+                <TeamColorPicker defaultColor={team.color} />
+                <Button type="submit" variant="secondary">
+                  Save changes
+                </Button>
+              </form>
+            </details>
 
             {team.members.length === 0 ? (
               <p className="mt-4 text-sm text-slate-500">No members yet.</p>

@@ -1,6 +1,14 @@
-import { DEFAULT_TEAM_COLOR, TEAM_COLORS } from "@/lib/team-colors";
+import { DEFAULT_TEAM_COLOR, resolveTeamColor, TEAM_COLORS } from "@/lib/team-colors";
 
-export function TeamColorPicker({ name = "color" }: { name?: string }) {
+export function TeamColorPicker({
+  name = "color",
+  defaultColor = DEFAULT_TEAM_COLOR,
+}: {
+  name?: string;
+  defaultColor?: string;
+}) {
+  const selectedColor = resolveTeamColor(defaultColor);
+
   return (
     <fieldset className="space-y-2">
       <legend className="text-sm font-medium text-slate-700">Team colour</legend>
@@ -11,7 +19,7 @@ export function TeamColorPicker({ name = "color" }: { name?: string }) {
               type="radio"
               name={name}
               value={color}
-              defaultChecked={color === DEFAULT_TEAM_COLOR}
+              defaultChecked={color === selectedColor}
               className="peer sr-only"
             />
             <span
