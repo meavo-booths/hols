@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { LoginForm } from "@/components/login-form";
@@ -12,8 +13,17 @@ export default async function LoginPage() {
   return (
     <div className="w-full">
       <Card className="mx-auto w-full max-w-md text-center">
-        <h1 className="text-2xl font-semibold text-slate-900">Vacation Tracker</h1>
-        <p className="mt-2 text-slate-600">
+        <div className="flex justify-center">
+          <Image
+            src="/meavo-logo.png"
+            alt="Meavo"
+            width={96}
+            height={48}
+            className="h-12 w-auto object-contain"
+            priority
+          />
+        </div>
+        <p className="mt-4 text-slate-600">
           Sign in with your email and password to view the team calendar and manage time off.
         </p>
         <LoginForm />
