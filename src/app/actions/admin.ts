@@ -20,6 +20,9 @@ export async function createUser(formData: FormData): Promise<void> {
   const name = (formData.get("name") as string)?.trim() || null;
   const password = formData.get("password") as string;
   const makeAdmin = formData.get("makeAdmin") === "on";
+  const teamId = (formData.get("teamId") as string) || "";
+  const role =
+    (formData.get("role") as string) === "MANAGER" ? TeamRole.MANAGER : TeamRole.MEMBER;
 
   if (!email) return;
   if (!password || password.length < 8) return;
@@ -27,15 +30,46 @@ export async function createUser(formData: FormData): Promise<void> {
   const existing = await prisma.user.findUnique({ where: { email } });
   if (existing) return;
 
-  await prisma.user.create({
-    data: {
-      email,
-      name,
-      passwordHash: await hashPassword(password),
-      systemRole: makeAdmin ? SystemRole.ADMIN : SystemRole.USER,
-    },
+  const passwordHash = await hashPassword(password);
+
+  await prisma.$transaction(async (tx) => {
+    const user = await tx.user.create({
+      data: {
+        email,
+        name,
+        passwordHash,
+        systemRole: makeAdmin ? SystemRole.ADMIN : SystemRole.USER,
+      },
+    });
+
+    if (teamId) {
+      await tx.teamMember.create({
+        data: { userId: user.id, teamId, role },
+      });
+    }
   });
 
+  revalidatePath("/admin");
+}
+
+export async function deleteUser(userId: string): Promise<void> {
+  const session = await requireAdmin();
+  if (!userId || userId === session.id) return;
+
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { systemRole: true },
+  });
+  if (!user) return;
+
+  if (user.systemRole === SystemRole.ADMIN) {
+    const adminCount = await prisma.user.count({
+      where: { systemRole: SystemRole.ADMIN },
+    });
+    if (adminCount <= 1) return;
+  }
+
+  await prisma.user.delete({ where: { id: userId } });
   revalidatePath("/admin");
 }
 

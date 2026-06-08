@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { getRemainingDays } from "@/lib/allowance";
 import { isAdmin } from "@/lib/permissions";
 import {
   addTeamMember,
@@ -12,6 +13,7 @@ import {
   setUserAllowance,
   updateTeamAllowance,
 } from "@/app/actions/admin";
+import { DeleteUserButton } from "@/components/delete-user-button";
 import { Button, Card, Input, PageHeader, Select } from "@/components/ui";
 
 export default async function AdminPage() {
@@ -40,6 +42,17 @@ export default async function AdminPage() {
     }),
   ]);
 
+  const memberUserIds = [
+    ...new Set(teams.flatMap((team) => team.members.map((member) => member.user.id))),
+  ];
+  const allowanceByUserId = Object.fromEntries(
+    await Promise.all(
+      memberUserIds.map(async (userId) => [userId, await getRemainingDays(userId, year)] as const)
+    )
+  );
+
+  const teamOptions = teams.map((t) => ({ value: t.id, label: t.name }));
+
   return (
     <div className="space-y-8">
       <PageHeader
@@ -62,6 +75,21 @@ export default async function AdminPage() {
               type="password"
               required
               autoComplete="new-password"
+            />
+            <Select
+              label="Team"
+              name="teamId"
+              defaultValue=""
+              options={[{ value: "", label: "— No team —" }, ...teamOptions]}
+            />
+            <Select
+              label="Team role"
+              name="role"
+              defaultValue="MEMBER"
+              options={[
+                { value: "MEMBER", label: "Member" },
+                { value: "MANAGER", label: "Manager" },
+              ]}
             />
             <label className="flex items-center gap-2 text-sm text-slate-700">
               <input type="checkbox" name="makeAdmin" className="rounded border-slate-300" />
@@ -98,7 +126,7 @@ export default async function AdminPage() {
               label="Team"
               name="teamId"
               required
-              options={teams.map((t) => ({ value: t.id, label: t.name }))}
+              options={teamOptions}
             />
             <Select
               label="Role"
@@ -120,26 +148,35 @@ export default async function AdminPage() {
           <p className="mt-4 text-sm text-slate-500">No users yet.</p>
         ) : (
           <ul className="mt-4 divide-y divide-slate-100">
-            {users.map((user) => (
-              <li key={user.id} className="flex flex-wrap items-center justify-between gap-4 py-3">
-                <span className="text-sm">
-                  {user.name ? `${user.name} (${user.email})` : user.email}
-                </span>
-                <form action={resetUserPassword} className="flex items-end gap-2">
-                  <input type="hidden" name="userId" value={user.id} />
-                  <Input
-                    label="New password"
-                    name="password"
-                    type="password"
-                    required
-                    autoComplete="new-password"
-                  />
-                  <Button type="submit" variant="secondary">
-                    Reset
-                  </Button>
-                </form>
-              </li>
-            ))}
+            {users.map((user) => {
+              const label = user.name ? `${user.name} (${user.email})` : user.email;
+              return (
+                <li
+                  key={user.id}
+                  className="flex flex-wrap items-center justify-between gap-4 py-3"
+                >
+                  <span className="text-sm">{label}</span>
+                  <div className="flex flex-wrap items-end gap-2">
+                    <form action={resetUserPassword} className="flex items-end gap-2">
+                      <input type="hidden" name="userId" value={user.id} />
+                      <Input
+                        label="New password"
+                        name="password"
+                        type="password"
+                        required
+                        autoComplete="new-password"
+                      />
+                      <Button type="submit" variant="secondary">
+                        Reset
+                      </Button>
+                    </form>
+                    {user.id !== session.user.id && (
+                      <DeleteUserButton userId={user.id} userLabel={label} />
+                    )}
+                  </div>
+                </li>
+              );
+            })}
           </ul>
         )}
       </Card>
@@ -220,24 +257,33 @@ export default async function AdminPage() {
               <p className="mt-4 text-sm text-slate-500">No members yet.</p>
             ) : (
               <ul className="mt-4 divide-y divide-slate-100">
-                {team.members.map((member) => (
-                  <li
-                    key={member.id}
-                    className="flex items-center justify-between py-3 text-sm"
-                  >
-                    <span>
-                      {member.user.name ?? member.user.email}{" "}
-                      <span className="text-slate-400">
-                        ({member.role === "MANAGER" ? "Manager" : "Member"})
+                {team.members.map((member) => {
+                  const balance = allowanceByUserId[member.user.id];
+                  return (
+                    <li
+                      key={member.id}
+                      className="flex items-center justify-between py-3 text-sm"
+                    >
+                      <span>
+                        {member.user.name ?? member.user.email}{" "}
+                        <span className="text-slate-400">
+                          ({member.role === "MANAGER" ? "Manager" : "Member"})
+                        </span>
+                        {balance && (
+                          <span className="ml-2 text-emerald-600">
+                            · {balance.remaining} day{balance.remaining !== 1 ? "s" : ""}{" "}
+                            remaining
+                          </span>
+                        )}
                       </span>
-                    </span>
-                    <form action={removeTeamMember.bind(null, member.id)}>
-                      <Button type="submit" variant="ghost">
-                        Remove
-                      </Button>
-                    </form>
-                  </li>
-                ))}
+                      <form action={removeTeamMember.bind(null, member.id)}>
+                        <Button type="submit" variant="ghost">
+                          Remove
+                        </Button>
+                      </form>
+                    </li>
+                  );
+                })}
               </ul>
             )}
           </Card>
