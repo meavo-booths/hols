@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { auth, signOut } from "@/lib/auth";
 import { getManagedTeamIds } from "@/lib/permissions";
@@ -22,8 +23,15 @@ export async function Nav() {
     <header className="border-b border-slate-200 bg-white">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-4">
         <div className="flex items-center gap-8">
-          <Link href="/" className="text-lg font-semibold text-brand-700">
-            Vacation Tracker
+          <Link href="/" className="flex shrink-0 items-center rounded-md focus:outline-none focus:ring-2 focus:ring-brand-100">
+            <Image
+              src="/meavo-logo.png"
+              alt="Meavo"
+              width={72}
+              height={36}
+              className="h-9 w-auto object-contain"
+              priority
+            />
           </Link>
           <nav className="flex gap-1">
             {links
