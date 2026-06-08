@@ -38,18 +38,14 @@ export async function createVacationRequest(formData: FormData) {
   return { success: true };
 }
 
-export async function cancelVacationRequest(requestId: string) {
+export async function cancelVacationRequest(requestId: string): Promise<void> {
   const user = await requireUser();
   const request = await prisma.vacationRequest.findUnique({
     where: { id: requestId },
   });
 
-  if (!request || request.userId !== user.id) {
-    return { error: "Request not found." };
-  }
-  if (request.status !== "PENDING") {
-    return { error: "Only pending requests can be cancelled." };
-  }
+  if (!request || request.userId !== user.id) return;
+  if (request.status !== "PENDING") return;
 
   await prisma.vacationRequest.update({
     where: { id: requestId },
@@ -58,7 +54,6 @@ export async function cancelVacationRequest(requestId: string) {
 
   revalidatePath("/");
   revalidatePath("/requests");
-  return { success: true };
 }
 
 export async function reviewVacationRequest(

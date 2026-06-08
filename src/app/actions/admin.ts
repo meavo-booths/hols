@@ -14,20 +14,18 @@ async function requireAdmin() {
   return session.user;
 }
 
-export async function createUser(formData: FormData) {
+export async function createUser(formData: FormData): Promise<void> {
   await requireAdmin();
   const email = (formData.get("email") as string)?.trim().toLowerCase();
   const name = (formData.get("name") as string)?.trim() || null;
   const password = formData.get("password") as string;
   const makeAdmin = formData.get("makeAdmin") === "on";
 
-  if (!email) return { error: "Email is required." };
-  if (!password || password.length < 8) {
-    return { error: "Password must be at least 8 characters." };
-  }
+  if (!email) return;
+  if (!password || password.length < 8) return;
 
   const existing = await prisma.user.findUnique({ where: { email } });
-  if (existing) return { error: "A user with this email already exists." };
+  if (existing) return;
 
   await prisma.user.create({
     data: {
@@ -39,18 +37,15 @@ export async function createUser(formData: FormData) {
   });
 
   revalidatePath("/admin");
-  return { success: true };
 }
 
-export async function resetUserPassword(formData: FormData) {
+export async function resetUserPassword(formData: FormData): Promise<void> {
   await requireAdmin();
   const userId = formData.get("userId") as string;
   const password = formData.get("password") as string;
 
-  if (!userId) return { error: "User is required." };
-  if (!password || password.length < 8) {
-    return { error: "Password must be at least 8 characters." };
-  }
+  if (!userId) return;
+  if (!password || password.length < 8) return;
 
   await prisma.user.update({
     where: { id: userId },
@@ -58,34 +53,31 @@ export async function resetUserPassword(formData: FormData) {
   });
 
   revalidatePath("/admin");
-  return { success: true };
 }
 
-export async function createTeam(formData: FormData) {
+export async function createTeam(formData: FormData): Promise<void> {
   await requireAdmin();
   const name = (formData.get("name") as string)?.trim();
   const yearlyAllowance = Number(formData.get("yearlyAllowance"));
 
-  if (!name) return { error: "Team name is required." };
-  if (!Number.isFinite(yearlyAllowance) || yearlyAllowance < 0) {
-    return { error: "Allowance must be a non-negative number." };
-  }
+  if (!name) return;
+  if (!Number.isFinite(yearlyAllowance) || yearlyAllowance < 0) return;
 
   try {
     await prisma.team.create({ data: { name, yearlyAllowance } });
   } catch {
-    return { error: "A team with that name already exists." };
+    return;
   }
 
   revalidatePath("/admin");
-  return { success: true };
 }
 
-export async function updateTeamAllowance(teamId: string, yearlyAllowance: number) {
+export async function updateTeamAllowance(
+  teamId: string,
+  yearlyAllowance: number
+): Promise<void> {
   await requireAdmin();
-  if (!Number.isFinite(yearlyAllowance) || yearlyAllowance < 0) {
-    return { error: "Invalid allowance." };
-  }
+  if (!Number.isFinite(yearlyAllowance) || yearlyAllowance < 0) return;
 
   await prisma.team.update({
     where: { id: teamId },
@@ -93,53 +85,46 @@ export async function updateTeamAllowance(teamId: string, yearlyAllowance: numbe
   });
 
   revalidatePath("/admin");
-  return { success: true };
 }
 
-export async function addTeamMember(formData: FormData) {
+export async function addTeamMember(formData: FormData): Promise<void> {
   await requireAdmin();
   const email = (formData.get("email") as string)?.trim().toLowerCase();
   const teamId = formData.get("teamId") as string;
   const role = (formData.get("role") as string) === "MANAGER" ? TeamRole.MANAGER : TeamRole.MEMBER;
 
-  if (!email || !teamId) return { error: "Email and team are required." };
+  if (!email || !teamId) return;
 
   const user = await prisma.user.findUnique({ where: { email } });
-  if (!user) {
-    return { error: "User not found. Create the user account in Admin first." };
-  }
+  if (!user) return;
 
   try {
     await prisma.teamMember.create({
       data: { userId: user.id, teamId, role },
     });
   } catch {
-    return { error: "User is already on this team." };
+    return;
   }
 
   revalidatePath("/admin");
-  return { success: true };
 }
 
-export async function removeTeamMember(memberId: string) {
+export async function removeTeamMember(memberId: string): Promise<void> {
   await requireAdmin();
   await prisma.teamMember.delete({ where: { id: memberId } });
   revalidatePath("/admin");
-  return { success: true };
 }
 
-export async function setUserAllowance(formData: FormData) {
+export async function setUserAllowance(formData: FormData): Promise<void> {
   await requireAdmin();
   const email = (formData.get("email") as string)?.trim().toLowerCase();
   const year = Number(formData.get("year"));
   const days = Number(formData.get("days"));
 
-  if (!email || !Number.isFinite(year) || !Number.isFinite(days) || days < 0) {
-    return { error: "Valid email, year, and days are required." };
-  }
+  if (!email || !Number.isFinite(year) || !Number.isFinite(days) || days < 0) return;
 
   const user = await prisma.user.findUnique({ where: { email } });
-  if (!user) return { error: "User not found." };
+  if (!user) return;
 
   await prisma.userAllowance.upsert({
     where: { userId_year: { userId: user.id, year } },
@@ -148,12 +133,10 @@ export async function setUserAllowance(formData: FormData) {
   });
 
   revalidatePath("/admin");
-  return { success: true };
 }
 
-export async function clearUserAllowance(allowanceId: string) {
+export async function clearUserAllowance(allowanceId: string): Promise<void> {
   await requireAdmin();
   await prisma.userAllowance.delete({ where: { id: allowanceId } });
   revalidatePath("/admin");
-  return { success: true };
 }
