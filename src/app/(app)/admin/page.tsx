@@ -4,17 +4,15 @@ import { prisma } from "@/lib/prisma";
 import { getRemainingDays } from "@/lib/allowance";
 import { getManagedTeamIds, isAdmin } from "@/lib/permissions";
 import {
-  changeUserTeam,
   clearUserAllowance,
   createTeam,
   createUser,
   removeTeamMember,
-  resetUserPassword,
   setUserAllowance,
   updateTeam,
   updateTeamAllowance,
 } from "@/app/actions/admin";
-import { DeleteUserButton } from "@/components/delete-user-button";
+import { AdminUsersList } from "@/components/admin-users-list";
 import { TeamColorPicker } from "@/components/team-color-picker";
 import { resolveTeamColor } from "@/lib/team-colors";
 import { Button, Card, Input, PageHeader, Select } from "@/components/ui";
@@ -74,6 +72,18 @@ export default async function AdminPage() {
   );
 
   const teamOptions = teams.map((t) => ({ value: t.id, label: t.name }));
+
+  const adminUsers = users.map((user) => {
+    const membership = user.teamMemberships[0];
+    return {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      teamId: membership?.teamId ?? null,
+      teamName: membership?.team.name ?? null,
+      role: membership?.role ?? null,
+    };
+  });
 
   return (
     <div className="space-y-8">
@@ -147,70 +157,14 @@ export default async function AdminPage() {
 
           <Card>
             <h2 className="text-lg font-semibold text-slate-900">Users</h2>
-            {users.length === 0 ? (
-              <p className="mt-4 text-sm text-slate-500">No users yet.</p>
-            ) : (
-              <ul className="mt-4 divide-y divide-slate-100">
-                {users.map((user) => {
-                  const label = user.name ? `${user.name} (${user.email})` : user.email;
-                  const membership = user.teamMemberships[0];
-                  const currentTeamLabel = membership
-                    ? `${membership.team.name} (${membership.role === "MANAGER" ? "Manager" : "Member"})`
-                    : "No team";
-                  return (
-                    <li
-                      key={user.id}
-                      className="flex flex-wrap items-center justify-between gap-4 py-3"
-                    >
-                      <div className="text-sm">
-                        <p>{label}</p>
-                        <p className="text-slate-500">{currentTeamLabel}</p>
-                      </div>
-                      <div className="flex flex-wrap items-end gap-2">
-                        <form action={changeUserTeam} className="flex items-end gap-2">
-                          <input type="hidden" name="userId" value={user.id} />
-                          <Select
-                            label="Team"
-                            name="teamId"
-                            required
-                            defaultValue={membership?.teamId ?? teamOptions[0]?.value}
-                            options={teamOptions}
-                          />
-                          <Select
-                            label="Role"
-                            name="role"
-                            defaultValue={membership?.role ?? "MEMBER"}
-                            options={[
-                              { value: "MEMBER", label: "Member" },
-                              { value: "MANAGER", label: "Manager" },
-                            ]}
-                          />
-                          <Button type="submit" variant="secondary">
-                            Change team
-                          </Button>
-                        </form>
-                        <form action={resetUserPassword} className="flex items-end gap-2">
-                          <input type="hidden" name="userId" value={user.id} />
-                          <Input
-                            label="New password"
-                            name="password"
-                            type="password"
-                            required
-                            autoComplete="new-password"
-                          />
-                          <Button type="submit" variant="secondary">
-                            Reset
-                          </Button>
-                        </form>
-                        {user.id !== userId && (
-                          <DeleteUserButton userId={user.id} userLabel={label} />
-                        )}
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
+            <p className="mt-1 text-sm text-slate-500">
+              Manage team assignments, passwords, and accounts.
+            </p>
+            <AdminUsersList
+              users={adminUsers}
+              teamOptions={teamOptions}
+              currentUserId={userId}
+            />
           </Card>
 
           <Card>
