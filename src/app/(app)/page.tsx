@@ -12,9 +12,11 @@ export default async function HomePage() {
   if (!session?.user?.id) redirect("/login");
   const userId = session.user.id;
   const year = new Date().getFullYear();
+  const nextYear = year + 1;
 
-  const [balance, teams] = await Promise.all([
+  const [balance, nextYearBalance, teams] = await Promise.all([
     getRemainingDays(userId, year),
+    getRemainingDays(userId, nextYear),
     prisma.team.findMany({
       orderBy: { name: "asc" },
       select: { id: true, name: true, color: true },
@@ -29,8 +31,9 @@ export default async function HomePage() {
       />
 
       <div className="grid gap-6 lg:grid-cols-3">
-        <div className="lg:col-span-1">
+        <div className="space-y-6 lg:col-span-1">
           <AllowanceSummary year={year} {...balance} />
+          <AllowanceSummary year={nextYear} {...nextYearBalance} />
         </div>
         <div className="lg:col-span-2">
           <RequestForm />
