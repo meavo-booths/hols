@@ -22,11 +22,6 @@ const requestInclude = {
   },
 } as const;
 
-const historyStatusTone = {
-  APPROVED: "success",
-  REJECTED: "danger",
-} as const;
-
 function teamScope(admin: boolean, managedTeamIds: string[]) {
   return admin
     ? {}
@@ -132,10 +127,13 @@ export default async function ApprovalsPage() {
         ) : (
           <div className="mt-4 space-y-4">
             {history.map((req) => {
+              if (req.status !== "APPROVED" && req.status !== "REJECTED") return null;
+
               const userLabel = req.user.name ?? req.user.email;
               const reviewerLabel = req.reviewedBy
                 ? req.reviewedBy.name ?? req.reviewedBy.email
                 : null;
+              const badgeTone = req.status === "APPROVED" ? "success" : "danger";
 
               return (
                 <Card
@@ -145,7 +143,7 @@ export default async function ApprovalsPage() {
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
                       <h3 className="font-semibold text-slate-900">{userLabel}</h3>
-                      <Badge tone={historyStatusTone[req.status]}>
+                      <Badge tone={badgeTone}>
                         {req.status.toLowerCase()}
                       </Badge>
                     </div>
