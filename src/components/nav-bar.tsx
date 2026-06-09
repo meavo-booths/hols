@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { signOutAction } from "@/app/actions/auth";
 import { Button } from "@/components/ui";
+import { UserAvatar } from "@/components/user-avatar";
 
 type NavLink = {
   href: string;
@@ -16,10 +17,12 @@ export function NavBar({
   links,
   userName,
   userEmail,
+  userImage,
 }: {
   links: NavLink[];
   userName: string | null | undefined;
   userEmail: string | null | undefined;
+  userImage?: string | null;
 }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
@@ -71,6 +74,7 @@ export function NavBar({
         </nav>
 
         <div className="hidden items-center gap-3 md:flex">
+          <UserAvatar name={userName} email={userEmail} image={userImage} size="sm" />
           <div className="max-w-[12rem] truncate text-right text-sm lg:max-w-none">
             <p className="truncate font-medium text-slate-900">{displayName}</p>
             <p className="hidden truncate text-slate-500 lg:block">{userEmail}</p>
@@ -132,8 +136,13 @@ export function NavBar({
           ))}
         </nav>
         <div className="border-t border-slate-100 px-3 py-4">
-          <p className="truncate text-sm font-medium text-slate-900">{displayName}</p>
-          {userEmail && <p className="truncate text-sm text-slate-500">{userEmail}</p>}
+          <div className="flex items-center gap-3">
+            <UserAvatar name={userName} email={userEmail} image={userImage} size="sm" />
+            <div className="min-w-0">
+              <p className="truncate text-sm font-medium text-slate-900">{displayName}</p>
+              {userEmail && <p className="truncate text-sm text-slate-500">{userEmail}</p>}
+            </div>
+          </div>
           <form action={signOutAction} className="mt-3">
             <Button type="submit" variant="secondary" className="w-full">
               Sign out

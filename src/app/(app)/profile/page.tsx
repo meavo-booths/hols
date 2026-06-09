@@ -10,7 +10,7 @@ export default async function ProfilePage() {
 
   const user = await prisma.user.findUnique({
     where: { id: session.user.id },
-    select: { name: true, email: true },
+    select: { name: true, email: true, image: true },
   });
 
   if (!user) redirect("/login");
@@ -21,7 +21,7 @@ export default async function ProfilePage() {
         title="Account"
         description="Manage your display name and password."
       />
-      <ProfileForm email={user.email} name={user.name} />
+      <ProfileForm email={user.email} name={user.name} image={user.image} />
     </div>
   );
 }

@@ -3,13 +3,16 @@
 import { useState, useTransition } from "react";
 import { changePassword, updateProfileName } from "@/app/actions/profile";
 import { Button, Card, Input } from "@/components/ui";
+import { UserAvatar } from "@/components/user-avatar";
 
 export function ProfileForm({
   email,
   name,
+  image,
 }: {
   email: string;
   name: string | null;
+  image: string | null;
 }) {
   const [nameSuccess, setNameSuccess] = useState(false);
   const [namePending, startNameTransition] = useTransition();
@@ -21,10 +24,15 @@ export function ProfileForm({
   return (
     <div className="space-y-6">
       <Card>
-        <h2 className="text-lg font-semibold text-slate-900">Profile</h2>
-        <p className="mt-1 text-sm text-slate-500">
-          Update how your name appears on the calendar and in approvals.
-        </p>
+        <div className="flex items-center gap-4">
+          <UserAvatar name={name} email={email} image={image} size="lg" />
+          <div className="min-w-0">
+            <h2 className="text-lg font-semibold text-slate-900">Profile</h2>
+            <p className="mt-1 text-sm text-slate-500">
+              Update how your name appears on the calendar and in approvals.
+            </p>
+          </div>
+        </div>
         <form
           className="mt-4 space-y-4"
           action={(formData) => {

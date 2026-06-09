@@ -120,10 +120,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         session.user.id = token.id as string;
         const dbUser = await prisma.user.findUnique({
           where: { id: token.id as string },
-          select: { name: true, email: true, systemRole: true },
+          select: { name: true, email: true, image: true, systemRole: true },
         });
         session.user.name = dbUser?.name ?? null;
         session.user.email = dbUser?.email ?? session.user.email;
+        session.user.image = dbUser?.image ?? null;
         session.user.systemRole = dbUser?.systemRole ?? SystemRole.USER;
       }
       return session;
