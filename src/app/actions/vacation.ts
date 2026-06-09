@@ -115,3 +115,25 @@ export async function reviewVacationRequest(
   revalidatePath("/requests");
   return { success: true };
 }
+
+export async function managerRevokeVacationRequest(requestId: string): Promise<void> {
+  const user = await requireUser();
+  const request = await prisma.vacationRequest.findUnique({
+    where: { id: requestId },
+  });
+
+  if (!request) return;
+  if (request.status !== "APPROVED" && request.status !== "REJECTED") return;
+
+  const allowed = await canReviewRequest(user.id, request.userId);
+  if (!allowed) return;
+
+  await prisma.vacationRequest.update({
+    where: { id: requestId },
+    data: { status: "CANCELLED" },
+  });
+
+  revalidatePath("/");
+  revalidatePath("/approvals");
+  revalidatePath("/requests");
+}
