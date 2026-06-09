@@ -2,6 +2,29 @@
 
 A simple company vacation tracker with teams, manager approvals, per-team and per-person yearly allowances, and a shared calendar. Sign in with email and password.
 
+**Users and teams are managed on [meavo.app](https://meavo.app)** — hols uses the same database. Grant Vacation Tracker access on the gateway to allow login here.
+
+## Shared database with meavo-gateway
+
+Hol s and gateway share one Neon Postgres database:
+
+- **Gateway** (`meavo.app`) — creates users, teams (name, colour, allowance), and tool access
+- **Hols** (`hols.meavo.app`) — vacation requests, approvals, calendar, individual allowance overrides
+
+Set hols `DATABASE_URL` to the **same connection string** as meavo-gateway on Vercel.
+
+First-time setup after linking databases:
+
+```bash
+# From meavo-gateway (creates users, teams, tool cards)
+npm run db:setup
+
+# From hols (adds VacationRequest, UserAllowance tables)
+npm run db:push
+```
+
+Users need the **Vacation Tracker** tool card on gateway before they can sign in here.
+
 ## Features
 
 - **Email & password sign-in** — admins create accounts for employees

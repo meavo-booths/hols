@@ -24,20 +24,22 @@ enum RequestStatus {
   CANCELLED
 }
 
+// Shared with meavo-gateway (same DATABASE_URL)
 model User {
-  id            String    @id @default(cuid())
+  id            String     @id @default(cuid())
   name          String?
-  email         String    @unique
+  email         String     @unique
   passwordHash  String?
   emailVerified DateTime?
   image         String?
   systemRole    SystemRole @default(USER)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
 
   accounts         Account[]
   sessions         Session[]
   teamMemberships  TeamMember[]
+  cardAccess       ToolCardAccess[]
   vacationRequests VacationRequest[] @relation("Requester")
   reviewedRequests VacationRequest[] @relation("Reviewer")
   allowances       UserAllowance[]
@@ -79,15 +81,13 @@ model VerificationToken {
 }
 
 model Team {
-  id              String   @id @default(cuid())
-  name            String   @unique
-  gatewayTeamId   String?  @unique
-  color           String   @default("#EEDCDC")
-  yearlyAllowance Int      @default(25)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-
-  members TeamMember[]
+  id              String       @id @default(cuid())
+  name            String       @unique
+  color           String       @default("#EEDCDC")
+  yearlyAllowance Int          @default(25)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  members         TeamMember[]
 }
 
 model TeamMember {
@@ -103,6 +103,31 @@ model TeamMember {
   @@unique([userId, teamId])
 }
 
+model ToolCard {
+  id          String           @id @default(cuid())
+  name        String
+  description String
+  url         String
+  sortOrder   Int              @default(0)
+  isActive    Boolean          @default(true)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  access      ToolCardAccess[]
+}
+
+model ToolCardAccess {
+  id        String   @id @default(cuid())
+  userId    String
+  cardId    String
+  createdAt DateTime @default(now())
+
+  user User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  card ToolCard @relation(fields: [cardId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, cardId])
+}
+
+// Vacation Tracker–specific
 model UserAllowance {
   id        String   @id @default(cuid())
   userId    String

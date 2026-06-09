@@ -4,6 +4,7 @@ import { SystemRole } from "@prisma/client";
 import { authConfig } from "@/lib/auth.config";
 import { prisma } from "@/lib/prisma";
 import { verifyPassword } from "@/lib/password";
+import { VACATION_TRACKER_CARD_ID } from "@/lib/vacation-tracker";
 
 const adminEmails = (process.env.ADMIN_EMAILS ?? "")
   .split(",")
@@ -30,6 +31,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
         const valid = await verifyPassword(password, user.passwordHash);
         if (!valid) return null;
+
+        const hasAccess = await prisma.toolCardAccess.findUnique({
+          where: {
+            userId_cardId: { userId: user.id, cardId: VACATION_TRACKER_CARD_ID },
+          },
+        });
+        if (!hasAccess) return null;
 
         if (adminEmails.includes(email) && user.systemRole !== SystemRole.ADMIN) {
           await prisma.user.update({

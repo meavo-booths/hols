@@ -3,18 +3,9 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getRemainingDays } from "@/lib/allowance";
 import { getManagedTeamIds, isAdmin } from "@/lib/permissions";
-import {
-  clearUserAllowance,
-  createTeam,
-  createUser,
-  removeTeamMember,
-  setUserAllowance,
-  updateTeam,
-  updateTeamAllowance,
-} from "@/app/actions/admin";
-import { AdminUsersList } from "@/components/admin-users-list";
-import { TeamColorPicker } from "@/components/team-color-picker";
+import { clearUserAllowance, setUserAllowance } from "@/app/actions/admin";
 import { resolveTeamColor } from "@/lib/team-colors";
+import { VACATION_TRACKER_CARD_ID } from "@/lib/vacation-tracker";
 import { Button, Card, Input, PageHeader, Select } from "@/components/ui";
 
 export default async function AdminPage() {
@@ -48,16 +39,11 @@ export default async function AdminPage() {
           orderBy: { updatedAt: "desc" },
         }),
         prisma.user.findMany({
-          orderBy: { name: "asc" },
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            teamMemberships: {
-              orderBy: { createdAt: "asc" },
-              select: { teamId: true, role: true, team: { select: { name: true } } },
-            },
+          where: {
+            cardAccess: { some: { cardId: VACATION_TRACKER_CARD_ID } },
           },
+          orderBy: { name: "asc" },
+          select: { name: true, email: true },
         }),
       ])
     : [[], []];
@@ -71,144 +57,59 @@ export default async function AdminPage() {
     )
   );
 
-  const teamOptions = teams.map((t) => ({ value: t.id, label: t.name }));
-
-  const adminUsers = users.map((user) => {
-    const membership = user.teamMemberships[0];
-    return {
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      teamId: membership?.teamId ?? null,
-      teamName: membership?.team.name ?? null,
-      role: membership?.role ?? null,
-    };
-  });
-
   return (
     <div className="space-y-8">
       <PageHeader
         title={admin ? "Admin" : "My team"}
         description={
           admin
-            ? "Manage teams, members, managers, and individual yearly allowances."
+            ? "Manage individual allowance overrides. Teams and users are managed on meavo.app."
             : "View your team members and their remaining allowance."
         }
       />
 
       {admin && (
-        <>
-          <div className="grid gap-6 lg:grid-cols-2">
-            <Card>
-              <h2 className="text-lg font-semibold text-slate-900">Create user</h2>
-              <p className="mt-1 text-sm text-slate-500">
-                Add employee accounts with email and password.
-              </p>
-              {teamOptions.length === 0 ? (
-                <p className="mt-4 text-sm text-amber-700">Create a team before adding users.</p>
-              ) : (
-                <form action={createUser} className="mt-4 space-y-4">
-                  <Input label="Email" name="email" type="email" required />
-                  <Input label="Name" name="name" placeholder="Jane Smith" />
-                  <Input
-                    label="Password"
-                    name="password"
-                    type="password"
-                    required
-                    autoComplete="new-password"
-                  />
-                  <Select label="Team" name="teamId" required options={teamOptions} />
-                  <Select
-                    label="Team role"
-                    name="role"
-                    defaultValue="MEMBER"
-                    options={[
-                      { value: "MEMBER", label: "Member" },
-                      { value: "MANAGER", label: "Manager" },
-                    ]}
-                  />
-                  <label className="flex items-center gap-2 text-sm text-slate-700">
-                    <input type="checkbox" name="makeAdmin" className="rounded border-slate-300" />
-                    Grant admin access
-                  </label>
-                  <Button type="submit">Create user</Button>
-                </form>
-              )}
-            </Card>
-
-            <Card>
-              <h2 className="text-lg font-semibold text-slate-900">Create team</h2>
-              <form action={createTeam} className="mt-4 space-y-4">
-                <Input label="Team name" name="name" required placeholder="Engineering" />
-                <Input
-                  label="Yearly allowance (days)"
-                  name="yearlyAllowance"
-                  type="number"
-                  defaultValue={25}
-                  min={0}
-                  required
-                />
-                <TeamColorPicker />
-                <Button type="submit">Create team</Button>
-              </form>
-            </Card>
-
-          </div>
-
-          <Card>
-            <h2 className="text-lg font-semibold text-slate-900">Users</h2>
-            <p className="mt-1 text-sm text-slate-500">
-              Manage team assignments, passwords, and accounts.
-            </p>
-            <AdminUsersList
-              users={adminUsers}
-              teamOptions={teamOptions}
-              currentUserId={userId}
+        <Card>
+          <h2 className="text-lg font-semibold text-slate-900">Individual allowance override</h2>
+          <p className="mt-1 text-sm text-slate-500">
+            Overrides the team default for a specific person and year.
+          </p>
+          <form action={setUserAllowance} className="mt-4 grid gap-4 sm:grid-cols-4">
+            <Select
+              label="User"
+              name="email"
+              required
+              options={users.map((u) => ({
+                value: u.email,
+                label: u.name ? `${u.name} (${u.email})` : u.email,
+              }))}
             />
-          </Card>
+            <Input label="Year" name="year" type="number" defaultValue={year} required />
+            <Input label="Days" name="days" type="number" min={0} required />
+            <div className="flex items-end">
+              <Button type="submit" className="w-full">
+                Save override
+              </Button>
+            </div>
+          </form>
 
-          <Card>
-            <h2 className="text-lg font-semibold text-slate-900">Individual allowance override</h2>
-            <p className="mt-1 text-sm text-slate-500">
-              Overrides the team default for a specific person and year.
-            </p>
-            <form action={setUserAllowance} className="mt-4 grid gap-4 sm:grid-cols-4">
-              <Select
-                label="User"
-                name="email"
-                required
-                options={users.map((u) => ({
-                  value: u.email,
-                  label: u.name ? `${u.name} (${u.email})` : u.email,
-                }))}
-              />
-              <Input label="Year" name="year" type="number" defaultValue={year} required />
-              <Input label="Days" name="days" type="number" min={0} required />
-              <div className="flex items-end">
-                <Button type="submit" className="w-full">
-                  Save override
-                </Button>
-              </div>
-            </form>
-
-            {allowances.length > 0 && (
-              <ul className="mt-6 divide-y divide-slate-100">
-                {allowances.map((a) => (
-                  <li key={a.id} className="flex items-center justify-between py-3 text-sm">
-                    <span>
-                      {a.user.name ?? a.user.email} — {a.year}: {a.days} days
-                    </span>
-                    <form action={clearUserAllowance.bind(null, a.id)}>
-                      <Button type="submit" variant="ghost">
-                        Remove
-                      </Button>
-                    </form>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </Card>
-        </>
+          {allowances.length > 0 && (
+            <ul className="mt-6 divide-y divide-slate-100">
+              {allowances.map((a) => (
+                <li key={a.id} className="flex items-center justify-between py-3 text-sm">
+                  <span>
+                    {a.user.name ?? a.user.email} — {a.year}: {a.days} days
+                  </span>
+                  <form action={clearUserAllowance.bind(null, a.id)}>
+                    <Button type="submit" variant="ghost">
+                      Remove
+                    </Button>
+                  </form>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Card>
       )}
 
       <div className="space-y-4">
@@ -219,56 +120,27 @@ export default async function AdminPage() {
         ) : (
           teams.map((team) => (
             <Card key={team.id}>
-              <div className="flex flex-wrap items-start justify-between gap-4">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span
-                      className="h-5 w-5 shrink-0 rounded"
-                      style={{ backgroundColor: resolveTeamColor(team.color) }}
-                    />
-                    <h2 className="text-lg font-semibold text-slate-900">{team.name}</h2>
-                  </div>
-                  <p className="text-sm text-slate-500">
-                    Default allowance: {team.yearlyAllowance} days/year
-                  </p>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span
+                    className="h-5 w-5 shrink-0 rounded"
+                    style={{ backgroundColor: resolveTeamColor(team.color) }}
+                  />
+                  <h2 className="text-lg font-semibold text-slate-900">{team.name}</h2>
                 </div>
+                <p className="mt-1 text-sm text-slate-500">
+                  Default allowance: {team.yearlyAllowance} days/year
+                </p>
                 {admin && (
-                  <form
-                    action={async (formData) => {
-                      "use server";
-                      await updateTeamAllowance(team.id, Number(formData.get("yearlyAllowance")));
-                    }}
-                    className="flex items-end gap-2"
-                  >
-                    <Input
-                      label="Update allowance"
-                      name="yearlyAllowance"
-                      type="number"
-                      defaultValue={team.yearlyAllowance}
-                      min={0}
-                    />
-                    <Button type="submit" variant="secondary">
-                      Save
-                    </Button>
-                  </form>
+                  <p className="mt-1 text-xs text-slate-400">
+                    Team name, colour, and allowance are managed on{" "}
+                    <a href="https://meavo.app/admin" className="text-brand-600 hover:underline">
+                      meavo.app
+                    </a>
+                    .
+                  </p>
                 )}
               </div>
-
-              {admin && (
-                <details className="mt-4 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
-                  <summary className="cursor-pointer text-sm font-medium text-slate-700">
-                    Edit team name &amp; colour
-                  </summary>
-                  <form action={updateTeam} className="mt-4 space-y-4">
-                    <input type="hidden" name="teamId" value={team.id} />
-                    <Input label="Team name" name="name" defaultValue={team.name} required />
-                    <TeamColorPicker defaultColor={team.color} />
-                    <Button type="submit" variant="secondary">
-                      Save changes
-                    </Button>
-                  </form>
-                </details>
-              )}
 
               {team.members.length === 0 ? (
                 <p className="mt-4 text-sm text-slate-500">No members yet.</p>
@@ -277,28 +149,15 @@ export default async function AdminPage() {
                   {team.members.map((member) => {
                     const balance = allowanceByUserId[member.user.id];
                     return (
-                      <li
-                        key={member.id}
-                        className="flex items-center justify-between py-3 text-sm"
-                      >
-                        <span>
-                          {member.user.name ?? member.user.email}{" "}
-                          <span className="text-slate-400">
-                            ({member.role === "MANAGER" ? "Manager" : "Member"})
-                          </span>
-                          {balance && (
-                            <span className="ml-2 text-emerald-600">
-                              · {balance.remaining} day{balance.remaining !== 1 ? "s" : ""}{" "}
-                              remaining
-                            </span>
-                          )}
+                      <li key={member.id} className="py-3 text-sm">
+                        {member.user.name ?? member.user.email}{" "}
+                        <span className="text-slate-400">
+                          ({member.role === "MANAGER" ? "Manager" : "Member"})
                         </span>
-                        {admin && (
-                          <form action={removeTeamMember.bind(null, member.id)}>
-                            <Button type="submit" variant="ghost">
-                              Remove
-                            </Button>
-                          </form>
+                        {balance && (
+                          <span className="ml-2 text-emerald-600">
+                            · {balance.remaining} day{balance.remaining !== 1 ? "s" : ""} remaining
+                          </span>
                         )}
                       </li>
                     );
