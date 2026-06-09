@@ -134,3 +134,79 @@ At your DNS provider, add the record Vercel shows (usually a `CNAME` to `cname.v
 - `AUTH_URL` must exactly match your live domain (HTTPS, no trailing slash)
 - Remove `ADMIN_PASSWORD` from Vercel env vars after seeding
 - Do not commit `.env` or `.env.production.local`
+
+## Preview staging setup
+
+Use a **separate Neon database** for Vercel Preview deployments so test requests never touch production data.
+
+### Step 1 — Create a staging database in Neon
+
+1. Open [console.neon.tech](https://console.neon.tech) and select your project.
+2. Create a new database (e.g. `vacation_staging`) in the same project, or create a separate Neon project if you prefer.
+3. Copy the **pooled** connection string (`postgresql://...?sslmode=require`).
+
+Keep production and staging connection strings separate — label them clearly.
+
+### Step 2 — Configure Vercel Preview environment variables
+
+In Vercel → your project → **Settings** → **Environment Variables**, set:
+
+| Variable | Environments | Value |
+|----------|--------------|-------|
+| `DATABASE_URL` | **Preview only** | Staging Neon connection string from Step 1 |
+| `AUTH_SECRET` | Production + Preview | Same value as production (or generate a new one for preview) |
+| `AUTH_URL` | **Production only** | `https://hols.meavo.app` |
+| `ADMIN_EMAILS` | Production + Preview | Your admin email (or a dedicated staging email) |
+| `ADMIN_PASSWORD` | **Preview only** | A known staging password (e.g. `staging-change-me`) |
+| `SLACK_WEBHOOK_URL` | **Production only** | Your real Slack webhook |
+
+Important:
+
+- Edit the existing `DATABASE_URL` entry so it applies to **Production only**, not Preview.
+- Do **not** set `AUTH_URL` or `SLACK_WEBHOOK_URL` on Preview — previews use Vercel’s dynamic URL and skip Slack when the webhook is unset.
+
+### Step 3 — Link the project locally (if needed)
+
+```bash
+vercel link
+```
+
+Select your Vercel team and the Vacation Tracker project.
+
+### Step 4 — Initialize the preview database
+
+```bash
+vercel env pull .env.preview.local --environment=preview
+chmod +x scripts/setup-preview-db.sh
+npm run db:setup:preview
+```
+
+This runs `db:push` and `db:seed` against the **staging** database only.
+
+### Step 5 — Test with a feature branch
+
+```bash
+git checkout -b staging-test
+git push -u origin staging-test
+```
+
+Vercel builds a preview URL (also shown on the GitHub PR). Sign in with `ADMIN_EMAILS` / your preview `ADMIN_PASSWORD`.
+
+### Step 6 — Day-to-day workflow
+
+1. Create a branch for each change.
+2. Push and test on the preview URL.
+3. Merge to `main` when ready — that updates production only.
+
+### When the database schema changes
+
+After merging schema changes to `main`, re-run preview DB setup so staging stays in sync:
+
+```bash
+vercel env pull .env.preview.local --environment=preview
+npm run db:setup:preview
+```
+
+### Reset staging data (optional)
+
+Re-run `npm run db:setup:preview` anytime to recreate tables and re-seed the admin user on the staging database. This does not affect production.
