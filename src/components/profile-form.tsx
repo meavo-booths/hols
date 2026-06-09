@@ -22,7 +22,7 @@ export function ProfileForm({
   const [passwordPending, startPasswordTransition] = useTransition();
 
   return (
-    <div className="space-y-6">
+    <div className="grid gap-6 lg:grid-cols-2">
       <Card>
         <div className="flex items-center gap-4">
           <UserAvatar name={name} email={email} image={image} size="lg" />
