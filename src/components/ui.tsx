@@ -8,7 +8,7 @@ export function Card({
   className?: string;
 }) {
   return (
-    <div className={`rounded-xl border border-slate-200 bg-white p-6 shadow-sm ${className}`}>
+    <div className={`rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6 ${className}`}>
       {children}
     </div>
   );
@@ -149,10 +149,10 @@ export function PageHeader({
   children?: ReactNode;
 }) {
   return (
-    <div className="mb-8 flex flex-wrap items-start justify-between gap-4">
-      <div>
-        <h1 className="text-2xl font-semibold text-slate-900">{title}</h1>
-        {description && <p className="mt-1 text-slate-600">{description}</p>}
+    <div className="mb-6 flex flex-wrap items-start justify-between gap-4 sm:mb-8">
+      <div className="min-w-0">
+        <h1 className="text-xl font-semibold text-slate-900 sm:text-2xl">{title}</h1>
+        {description && <p className="mt-1 text-sm text-slate-600 sm:text-base">{description}</p>}
       </div>
       {children}
     </div>

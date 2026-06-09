@@ -1,7 +1,11 @@
 "use server";
 
 import { AuthError } from "next-auth";
-import { signIn } from "@/lib/auth";
+import { signIn, signOut } from "@/lib/auth";
+
+export async function signOutAction(): Promise<void> {
+  await signOut({ redirectTo: "/login" });
+}
 
 type LoginState = { error?: string; ok?: boolean } | null;
 

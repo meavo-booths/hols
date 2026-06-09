@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import interactionPlugin from "@fullcalendar/interaction";
@@ -34,6 +34,15 @@ export function VacationCalendar({
 }) {
   const [teamId, setTeamId] = useState(initialTeamId ?? "");
   const [selected, setSelected] = useState<CalendarEvent | null>(null);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const media = window.matchMedia("(max-width: 639px)");
+    const update = () => setIsMobile(media.matches);
+    update();
+    media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
+  }, []);
 
   const fetchEvents = useCallback(
     async (info: { startStr: string; endStr: string }) => {
@@ -52,12 +61,12 @@ export function VacationCalendar({
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
         <label className="text-sm font-medium text-slate-700">Filter by team</label>
         <select
           value={teamId}
           onChange={(e) => setTeamId(e.target.value)}
-          className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm sm:w-auto"
         >
           <option value="">All teams</option>
           {teams.map((team) => (
@@ -82,16 +91,16 @@ export function VacationCalendar({
         </div>
       )}
 
-      <Card className="p-4">
+      <Card className="overflow-x-auto p-2 sm:p-4">
         <FullCalendar
-          key={teamId}
+          key={`${teamId}-${isMobile ? "mobile" : "desktop"}`}
           plugins={[dayGridPlugin, interactionPlugin]}
           initialView="dayGridMonth"
-          headerToolbar={{
-            left: "prev,next today",
-            center: "title",
-            right: "dayGridMonth,dayGridWeek",
-          }}
+          headerToolbar={
+            isMobile
+              ? { left: "prev,next", center: "title", right: "today" }
+              : { left: "prev,next today", center: "title", right: "dayGridMonth,dayGridWeek" }
+          }
           events={fetchEvents}
           height="auto"
           eventClick={(info) => {

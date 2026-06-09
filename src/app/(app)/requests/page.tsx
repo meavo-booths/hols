@@ -35,9 +35,9 @@ export default async function RequestsPage() {
       ) : (
         <div className="space-y-4">
           {requests.map((req) => (
-            <Card key={req.id} className="flex flex-wrap items-start justify-between gap-4">
-              <div>
-                <div className="flex items-center gap-2">
+            <Card key={req.id} className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
                   <h3 className="font-semibold text-slate-900">
                     {toDateInputValue(req.startDate)} → {toDateInputValue(req.endDate)}
                   </h3>

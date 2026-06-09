@@ -54,7 +54,7 @@ export default async function ApprovalsPage() {
       ) : (
         <div className="space-y-4">
           {pending.map((req) => (
-            <Card key={req.id} className="flex flex-wrap items-start justify-between gap-4">
+            <Card key={req.id} className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
               <div>
                 <h3 className="font-semibold text-slate-900">
                   {req.user.name ?? req.user.email}

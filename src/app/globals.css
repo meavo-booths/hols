@@ -21,3 +21,28 @@ body {
   --fc-button-hover-border-color: #0C8F61;
   --fc-today-bg-color: #f0fdf4;
 }
+
+@media (max-width: 639px) {
+  .fc .fc-toolbar {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .fc .fc-toolbar-title {
+    font-size: 1.1rem;
+  }
+
+  .fc .fc-button {
+    padding: 0.35rem 0.5rem;
+    font-size: 0.8rem;
+  }
+
+  .fc .fc-col-header-cell-cushion,
+  .fc .fc-daygrid-day-number {
+    font-size: 0.75rem;
+  }
+
+  .fc .fc-daygrid-event {
+    font-size: 0.7rem;
+  }
+}
