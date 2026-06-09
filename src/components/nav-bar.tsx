@@ -41,7 +41,7 @@ export function NavBar({
     <header className="relative border-b border-slate-200 bg-white">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-3 py-3 sm:px-4 sm:py-4">
         <Link
-          href="/"
+          href="https://meavo.app"
           className="flex shrink-0 items-center rounded-md focus:outline-none focus:ring-2 focus:ring-brand-100"
         >
           <Image
