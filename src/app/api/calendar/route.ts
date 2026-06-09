@@ -58,7 +58,7 @@ export async function GET(request: Request) {
 
     return {
       id: req.id,
-      title: `${req.user.name ?? req.user.email} — off`,
+      title: `${req.user.name ?? req.user.email} — off${req.days === 0.5 ? " (½)" : ""}`,
       start: req.startDate.toISOString().slice(0, 10),
       end: new Date(req.endDate.getTime() + 86400000).toISOString().slice(0, 10),
       backgroundColor: color,

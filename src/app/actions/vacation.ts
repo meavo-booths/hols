@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { parseDateInput } from "@/lib/dates";
+import type { RequestDuration } from "@/lib/days-format";
+import { inferRequestDuration } from "@/lib/days-format";
 import { validateRequestDays } from "@/lib/allowance";
 import { canReviewRequest } from "@/lib/permissions";
 import { notifySlackNewVacationRequest } from "@/lib/slack";
@@ -16,11 +18,15 @@ async function requireUser() {
 
 export async function createVacationRequest(formData: FormData) {
   const user = await requireUser();
+  const duration = (formData.get("duration") as RequestDuration) === "half" ? "half" : "full";
   const startDate = parseDateInput(formData.get("startDate") as string);
-  const endDate = parseDateInput(formData.get("endDate") as string);
+  const endDate =
+    duration === "half"
+      ? startDate
+      : parseDateInput(formData.get("endDate") as string);
   const note = (formData.get("note") as string) || null;
 
-  const validation = await validateRequestDays(user.id, startDate, endDate);
+  const validation = await validateRequestDays(user.id, startDate, endDate, undefined, duration);
   if (!validation.ok) return { error: validation.error };
 
   const request = await prisma.vacationRequest.create({
@@ -79,11 +85,17 @@ export async function reviewVacationRequest(
   if (!allowed) return { error: "You are not allowed to review this request." };
 
   if (action === "approve") {
+    const duration = inferRequestDuration(
+      request.startDate,
+      request.endDate,
+      request.days
+    );
     const validation = await validateRequestDays(
       request.userId,
       request.startDate,
       request.endDate,
-      requestId
+      requestId,
+      duration
     );
     if (!validation.ok) return { error: validation.error };
   }

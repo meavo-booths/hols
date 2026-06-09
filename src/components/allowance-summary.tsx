@@ -1,4 +1,5 @@
 import { Card } from "@/components/ui";
+import { formatDayCount } from "@/lib/days-format";
 
 export function AllowanceSummary({
   allowance,
@@ -18,15 +19,15 @@ export function AllowanceSummary({
       <h2 className="text-lg font-semibold text-slate-900">{year} allowance</h2>
       <div className="mt-4 grid grid-cols-3 gap-4 text-center">
         <div>
-          <p className="text-2xl font-semibold text-slate-900">{allowance}</p>
+          <p className="text-2xl font-semibold text-slate-900">{formatDayCount(allowance)}</p>
           <p className="text-xs text-slate-500">Total days</p>
         </div>
         <div>
-          <p className="text-2xl font-semibold text-amber-600">{used}</p>
+          <p className="text-2xl font-semibold text-amber-600">{formatDayCount(used)}</p>
           <p className="text-xs text-slate-500">Used</p>
         </div>
         <div>
-          <p className="text-2xl font-semibold text-emerald-600">{remaining}</p>
+          <p className="text-2xl font-semibold text-emerald-600">{formatDayCount(remaining)}</p>
           <p className="text-xs text-slate-500">Remaining</p>
         </div>
       </div>

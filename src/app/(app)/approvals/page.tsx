@@ -5,6 +5,7 @@ import { getManagedTeamIds, isAdmin } from "@/lib/permissions";
 import { ApprovalActions } from "@/components/approval-actions";
 import { Card, PageHeader } from "@/components/ui";
 import { toDateInputValue } from "@/lib/dates";
+import { formatDayLabel } from "@/lib/days-format";
 
 export default async function ApprovalsPage() {
   const session = await auth();
@@ -60,8 +61,11 @@ export default async function ApprovalsPage() {
                   {req.user.name ?? req.user.email}
                 </h3>
                 <p className="text-sm text-slate-600">
-                  {toDateInputValue(req.startDate)} → {toDateInputValue(req.endDate)} ·{" "}
-                  {req.days} day{req.days !== 1 ? "s" : ""}
+                  {toDateInputValue(req.startDate)}
+                  {toDateInputValue(req.startDate) !== toDateInputValue(req.endDate) &&
+                    ` → ${toDateInputValue(req.endDate)}`}
+                  {" · "}
+                  {formatDayLabel(req.days)}
                 </p>
                 <p className="text-xs text-slate-500">
                   Team:{" "}

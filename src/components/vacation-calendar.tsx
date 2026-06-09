@@ -5,6 +5,7 @@ import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import interactionPlugin from "@fullcalendar/interaction";
 import { resolveTeamColor } from "@/lib/team-colors";
+import { formatDayLabel } from "@/lib/days-format";
 import { Card } from "@/components/ui";
 
 type CalendarEvent = {
@@ -141,8 +142,8 @@ export function VacationCalendar({
               </dd>
             </div>
             <div>
-              <dt className="inline font-medium">Working days: </dt>
-              <dd className="inline">{selected.extendedProps.days}</dd>
+              <dt className="inline font-medium">Duration: </dt>
+              <dd className="inline">{formatDayLabel(selected.extendedProps.days)}</dd>
             </div>
             <div>
               <dt className="inline font-medium">Team(s): </dt>

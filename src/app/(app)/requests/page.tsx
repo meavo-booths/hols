@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { cancelVacationRequest } from "@/app/actions/vacation";
 import { Badge, Button, Card, PageHeader } from "@/components/ui";
 import { toDateInputValue } from "@/lib/dates";
+import { formatDayLabel } from "@/lib/days-format";
 
 const statusTone = {
   PENDING: "warning",
@@ -39,12 +40,14 @@ export default async function RequestsPage() {
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
                   <h3 className="font-semibold text-slate-900">
-                    {toDateInputValue(req.startDate)} → {toDateInputValue(req.endDate)}
+                    {toDateInputValue(req.startDate)}
+                    {toDateInputValue(req.startDate) !== toDateInputValue(req.endDate) &&
+                      ` → ${toDateInputValue(req.endDate)}`}
                   </h3>
                   <Badge tone={statusTone[req.status]}>{req.status.toLowerCase()}</Badge>
                 </div>
                 <p className="mt-1 text-sm text-slate-600">
-                  {req.days} working day{req.days !== 1 ? "s" : ""}
+                  {formatDayLabel(req.days)}
                   {req.note ? ` · ${req.note}` : ""}
                 </p>
                 {req.reviewedBy && (

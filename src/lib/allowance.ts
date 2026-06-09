@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
-import { countWorkingDays } from "@/lib/dates";
+import { calculateRequestDays } from "@/lib/dates";
+import type { RequestDuration } from "@/lib/days-format";
 
 export async function getYearlyAllowance(userId: string, year: number): Promise<number> {
   const individual = await prisma.userAllowance.findUnique({
@@ -47,17 +48,13 @@ export async function validateRequestDays(
   userId: string,
   startDate: Date,
   endDate: Date,
-  excludeRequestId?: string
+  excludeRequestId?: string,
+  duration: RequestDuration = "full"
 ): Promise<{ ok: true; days: number } | { ok: false; error: string }> {
-  if (endDate < startDate) {
-    return { ok: false, error: "End date must be on or after start date." };
-  }
+  const calculated = calculateRequestDays(startDate, endDate, duration);
+  if (!calculated.ok) return calculated;
 
-  const days = countWorkingDays(startDate, endDate);
-  if (days < 1) {
-    return { ok: false, error: "Request must include at least one working day." };
-  }
-
+  const { days } = calculated;
   const year = startDate.getFullYear();
   const { remaining } = await getRemainingDays(userId, year);
 
@@ -71,10 +68,14 @@ export async function validateRequestDays(
     }
   }
 
+  const remainingLabel = Number.isInteger(adjustedRemaining)
+    ? `${adjustedRemaining}`
+    : adjustedRemaining.toFixed(1);
+
   if (days > adjustedRemaining) {
     return {
       ok: false,
-      error: `Not enough allowance. You have ${adjustedRemaining} day(s) remaining.`,
+      error: `Not enough allowance. You have ${remainingLabel} day(s) remaining.`,
     };
   }
 

@@ -1,5 +1,6 @@
 import { format } from "date-fns";
 import { prisma } from "@/lib/prisma";
+import { formatDayLabel } from "@/lib/days-format";
 
 function getAppUrl(): string {
   if (process.env.AUTH_URL) return process.env.AUTH_URL.replace(/\/$/, "");
@@ -42,8 +43,7 @@ export async function notifySlackNewVacationRequest(requestId: string): Promise<
   const displayName = request.user.name ?? request.user.email;
   const teamName = request.user.teamMemberships[0]?.team.name ?? "No team";
   const dateRange = formatRequestDates(request.startDate, request.endDate);
-  const daysLabel =
-    request.days === 1 ? "1 working day" : `${request.days} working days`;
+  const daysLabel = formatDayLabel(request.days);
   const approvalsUrl = `${getAppUrl()}/approvals`;
 
   const noteBlock = request.note
