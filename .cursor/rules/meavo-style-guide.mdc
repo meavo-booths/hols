@@ -1,0 +1,44 @@
+---
+description: Meavo brand style guide reference for UI work
+globs: "**/*.{tsx,css,ts}"
+alwaysApply: false
+---
+
+# Meavo style guide
+
+Official reference: https://meavo.com/style-guide (PDF: MEAVO Style Guide)
+
+Use this for typography, palette, spacing, and visual tone when building or updating Meavo UI (gateway, hols, and related apps).
+
+## App button greens (do not change)
+
+Primary buttons in the apps intentionally use these values — **keep them even if the PDF shows other greens**:
+
+- Default: `#30A46C` (`brand-600`)
+- Hover: `#0C8F61` (`brand-700`)
+
+Defined in `tailwind.config.ts` as `bg-brand-600` / `hover:bg-brand-700`.
+
+## Brand palette (from style guide)
+
+| Token | Hex | Use |
+|-------|-----|-----|
+| Near black | `#212121` | Primary text |
+| Mid grey | `#727272` | Secondary text |
+| Light grey | `#EAEAEA` | Borders, dividers |
+| Warm white | `#FAF9F7` | Page backgrounds |
+| Cream | `#F2F0EB` | Cards, panels |
+| Warm beige | `#ECE8E1` | Subtle fills |
+| Greige | `#D7D3CD` | Muted accents |
+| Cool tint | `#E1E9EC` | Secondary surfaces |
+| Blush | `#EEDCDC` | Soft accent |
+| Gold | `#F4E3B1` | Highlight accent |
+
+## UI conventions (apps)
+
+- Neutral structure: `slate-*` for borders, nav, and form chrome (already in use).
+- Cards: white background, `rounded-xl`, light border, soft shadow.
+- Focus rings: `brand-100` / `brand-500` on inputs.
+- Logo: `/meavo-logo.png` — do not substitute text-only branding on login or nav.
+
+When adding new UI, align with the guide’s warm, minimal, professional tone. Prefer the palette above over ad-hoc colors.
