@@ -25,7 +25,6 @@ enum Company {
 enum ContractType {
   FTE
   FREELANCE
-  PAST_EMPLOYEE
 }
 
 enum RequestStatus {
