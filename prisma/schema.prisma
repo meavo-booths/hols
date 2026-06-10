@@ -17,6 +17,16 @@ enum TeamRole {
   MEMBER
 }
 
+enum Company {
+  MEAVO
+  OA
+}
+
+enum ContractType {
+  FTE
+  FREELANCE
+}
+
 enum RequestStatus {
   PENDING
   APPROVED
@@ -33,6 +43,7 @@ model User {
   emailVerified DateTime?
   image         String?
   systemRole    SystemRole @default(USER)
+  hrAccess      Boolean    @default(false)
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @updatedAt
 
@@ -43,6 +54,7 @@ model User {
   vacationRequests VacationRequest[] @relation("Requester")
   reviewedRequests VacationRequest[] @relation("Reviewer")
   allowances       UserAllowance[]
+  employee         Employee?
 }
 
 model Account {
@@ -161,4 +173,32 @@ model VacationRequest {
   @@index([userId])
   @@index([status])
   @@index([startDate, endDate])
+}
+
+model Employee {
+  id        String       @id @default(cuid())
+  userId    String       @unique
+  company   Company
+  contract  ContractType
+  startDate DateTime     @db.Date
+  role      String
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  documents EmployeeDocument[]
+}
+
+model EmployeeDocument {
+  id         String   @id @default(cuid())
+  employeeId String
+  fileName   String
+  mimeType   String
+  storageKey String
+  uploadedBy String
+  createdAt  DateTime @default(now())
+
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([employeeId])
 }
