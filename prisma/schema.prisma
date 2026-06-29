@@ -203,3 +203,46 @@ model EmployeeDocument {
 
   @@index([employeeId])
 }
+
+enum NotificationStatus {
+  PENDING
+  PROCESSING
+  SENT
+  FAILED
+}
+
+model NotificationOutbox {
+  id             String             @id @default(cuid())
+  sourceApp      String
+  eventType      String
+  idempotencyKey String?            @unique
+  payload        Json
+  status         NotificationStatus @default(PENDING)
+  attempts       Int                @default(0)
+  lastError      String?
+  scheduledFor   DateTime           @default(now())
+  sentAt         DateTime?
+  createdAt      DateTime           @default(now())
+
+  deliveries NotificationDelivery[]
+
+  @@index([status, scheduledFor])
+}
+
+model NotificationDelivery {
+  id              String             @id @default(cuid())
+  outboxId        String
+  recipientEmail  String
+  recipientUserId String?
+  subject         String
+  resendMessageId String?
+  status          NotificationStatus @default(PENDING)
+  sentAt          DateTime?
+  error           String?
+  createdAt       DateTime           @default(now())
+
+  outbox NotificationOutbox @relation(fields: [outboxId], references: [id], onDelete: Cascade)
+
+  @@index([outboxId])
+  @@index([createdAt])
+}

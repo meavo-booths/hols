@@ -9,6 +9,7 @@ import { inferRequestDuration } from "@/lib/days-format";
 import { validateRequestDays } from "@/lib/allowance";
 import { canReviewRequest } from "@/lib/permissions";
 import { notifySlackNewVacationRequest } from "@/lib/slack";
+import { enqueueNotification } from "@/lib/notifications/enqueue";
 
 async function requireUser() {
   const session = await auth();
@@ -41,6 +42,15 @@ export async function createVacationRequest(formData: FormData) {
 
   void notifySlackNewVacationRequest(request.id).catch((err) => {
     console.error("Slack notification failed:", err);
+  });
+
+  void enqueueNotification({
+    sourceApp: "hols",
+    eventType: "hols.vacation.requested",
+    idempotencyKey: `hols:vacation:requested:${request.id}`,
+    payload: { requestId: request.id },
+  }).catch((err) => {
+    console.error("Notification enqueue failed:", err);
   });
 
   revalidatePath("/");
@@ -108,6 +118,15 @@ export async function reviewVacationRequest(
       reviewedAt: new Date(),
       reviewNote: reviewNote || null,
     },
+  });
+
+  void enqueueNotification({
+    sourceApp: "hols",
+    eventType: action === "approve" ? "hols.vacation.approved" : "hols.vacation.rejected",
+    idempotencyKey: `hols:vacation:${action}:${requestId}`,
+    payload: { requestId },
+  }).catch((err) => {
+    console.error("Notification enqueue failed:", err);
   });
 
   revalidatePath("/");
