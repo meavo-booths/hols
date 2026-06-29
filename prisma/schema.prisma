@@ -246,3 +246,9 @@ model NotificationDelivery {
   @@index([outboxId])
   @@index([createdAt])
 }
+
+model NotificationEventSetting {
+  eventType String   @id
+  enabled   Boolean  @default(true)
+  updatedAt DateTime @updatedAt
+}

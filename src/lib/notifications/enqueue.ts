@@ -8,7 +8,18 @@ type EnqueueNotificationInput = {
   idempotencyKey?: string;
 };
 
+async function isNotificationEventEnabled(eventType: string): Promise<boolean> {
+  const setting = await prisma.notificationEventSetting.findUnique({
+    where: { eventType },
+    select: { enabled: true },
+  });
+  return setting?.enabled ?? true;
+}
+
 export async function enqueueNotification(input: EnqueueNotificationInput): Promise<void> {
+  const enabled = await isNotificationEventEnabled(input.eventType);
+  if (!enabled) return;
+
   try {
     await prisma.notificationOutbox.create({
       data: {
