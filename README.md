@@ -2,7 +2,7 @@
 
 A simple company vacation tracker with teams, manager approvals, per-team and per-person yearly allowances, and a shared calendar. Sign in with email and password.
 
-**Users and teams are managed on [meavo.app](https://meavo.app)** — hols uses the same database. Grant Vacation Tracker access on the gateway to allow login here.
+**Users and teams are managed on [meavo.app](https://meavo.app)** ([gateway repo](https://github.com/meavo-booths/meavo-gateway)) — hols uses the same database. Grant Vacation Tracker access on the gateway to allow login here.
 
 ## Shared database with meavo-gateway
 
@@ -108,7 +108,7 @@ The project is configured for PostgreSQL + Vercel out of the box.
 ### 1. Push to GitHub
 
 ```bash
-git remote add origin https://github.com/YOUR_USERNAME/vacation-tracker.git
+git remote add origin https://github.com/meavo-booths/hols.git
 git push -u origin main
 ```
 
