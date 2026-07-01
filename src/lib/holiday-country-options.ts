@@ -12,7 +12,7 @@ export const HOLIDAY_COUNTRY_OPTIONS: HolidayCountryOption[] = [
   { code: "DE", label: "Germany" },
   { code: "ES", label: "Spain" },
   { code: "FR", label: "France" },
-  { code: "GB", label: "United Kingdom" },
+  { code: "GB", label: "United Kingdom (England)" },
   { code: "GR", label: "Greece" },
   { code: "HR", label: "Croatia" },
   { code: "HU", label: "Hungary" },

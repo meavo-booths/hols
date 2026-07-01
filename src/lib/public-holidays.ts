@@ -1,13 +1,28 @@
 import { prisma } from "@/lib/prisma";
 import { isValidHolidayCountryCode } from "@/lib/holiday-country-options";
 
+const GB_ENG_SUBDIVISION = "GB-ENG";
+/** England has ~10–12 public holidays per year; old cache stored only nationwide (global) days. */
+const GB_MIN_COMPLETE_HOLIDAYS = 10;
+
 type NagerHoliday = {
   date: string;
   localName: string;
   name: string;
   global: boolean;
+  counties: string[] | null;
   types: string[];
 };
+
+function holidayAppliesForCountry(holiday: NagerHoliday, countryCode: string): boolean {
+  if (!holiday.types.includes("Public")) return false;
+
+  if (countryCode === "GB") {
+    return holiday.global || (holiday.counties?.includes(GB_ENG_SUBDIVISION) ?? false);
+  }
+
+  return holiday.global;
+}
 
 function toDateKey(date: Date): string {
   const year = date.getFullYear();
@@ -21,7 +36,7 @@ function parseApiDate(value: string): Date {
   return new Date(year, month - 1, day);
 }
 
-async function fetchNationalHolidaysFromApi(
+async function fetchPublicHolidaysFromApi(
   countryCode: string,
   year: number
 ): Promise<NagerHoliday[]> {
@@ -35,9 +50,7 @@ async function fetchNationalHolidaysFromApi(
   }
 
   const holidays = (await response.json()) as NagerHoliday[];
-  return holidays.filter(
-    (holiday) => holiday.global && holiday.types.includes("Public")
-  );
+  return holidays.filter((holiday) => holidayAppliesForCountry(holiday, countryCode));
 }
 
 export async function ensurePublicHolidaysForYear(
@@ -49,9 +62,14 @@ export async function ensurePublicHolidaysForYear(
   const existing = await prisma.publicHoliday.count({
     where: { countryCode, year },
   });
-  if (existing > 0) return;
+  const minComplete = countryCode === "GB" ? GB_MIN_COMPLETE_HOLIDAYS : 1;
+  if (existing >= minComplete) return;
 
-  const holidays = await fetchNationalHolidaysFromApi(countryCode, year);
+  if (countryCode === "GB" && existing > 0) {
+    await prisma.publicHoliday.deleteMany({ where: { countryCode: "GB", year } });
+  }
+
+  const holidays = await fetchPublicHolidaysFromApi(countryCode, year);
   if (holidays.length === 0) return;
 
   await prisma.$transaction(
