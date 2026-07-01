@@ -34,6 +34,11 @@ enum RequestStatus {
   CANCELLED
 }
 
+enum ToolCardKind {
+  LINK
+  APP_ACCESS
+}
+
 // Shared with meavo-gateway (same DATABASE_URL)
 model User {
   id            String     @id @default(cuid())
@@ -117,15 +122,20 @@ model TeamMember {
 }
 
 model ToolCard {
-  id          String           @id @default(cuid())
-  name        String
-  description String
-  url         String
-  sortOrder   Int              @default(0)
-  isActive    Boolean          @default(true)
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
-  access      ToolCardAccess[]
+  id           String           @id @default(cuid())
+  name         String
+  description  String
+  url          String
+  iconKey      String?
+  kind         ToolCardKind     @default(LINK)
+  linkedAppKey String?
+  sortOrder    Int              @default(0)
+  isActive     Boolean          @default(true)
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  access       ToolCardAccess[]
+
+  @@unique([linkedAppKey])
 }
 
 model ToolCardAccess {
