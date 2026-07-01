@@ -101,17 +101,17 @@ export default async function AdminPage() {
                 })),
               ]}
             />
-            <Input label="Year" name="year" type="number" defaultValue={year} required />
-            <Input label="Days" name="days" type="number" min={0} required />
+            <Input label="Year" name="year" type="number" defaultValue={year} />
+            <Input label="Days" name="days" type="number" min={0} placeholder="Team default" />
             <div className="flex items-end">
               <Button type="submit" className="w-full">
-                Save override
+                Save
               </Button>
             </div>
           </form>
           <p className="mt-2 text-xs text-slate-400">
-            Does not change already-approved requests. Location is saved on the user whenever you
-            submit this form.
+            Leave Days empty to keep the team default allowance. Location is always saved for the
+            selected user. Does not change already-approved requests.
           </p>
 
           {allowances.length > 0 && (
