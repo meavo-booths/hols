@@ -97,6 +97,7 @@ export function VacationCalendar({
           key={`${teamId}-${isMobile ? "mobile" : "desktop"}`}
           plugins={[dayGridPlugin, interactionPlugin]}
           initialView="dayGridMonth"
+          firstDay={1}
           headerToolbar={
             isMobile
               ? { left: "prev,next", center: "title", right: "today" }
