@@ -6,9 +6,13 @@ import dayGridPlugin from "@fullcalendar/daygrid";
 import interactionPlugin from "@fullcalendar/interaction";
 import { resolveTeamColor } from "@/lib/team-colors";
 import { formatDayLabel } from "@/lib/days-format";
+import {
+  HOLIDAY_COUNTRY_OPTIONS,
+  holidayCountryLabel,
+} from "@/lib/holiday-country-options";
 import { Card } from "@/components/ui";
 
-type CalendarEvent = {
+type LeaveEvent = {
   id: string;
   title: string;
   start: string;
@@ -17,6 +21,7 @@ type CalendarEvent = {
   borderColor?: string;
   textColor?: string;
   extendedProps: {
+    kind: "leave";
     userName: string | null;
     userEmail: string;
     teams: string;
@@ -26,6 +31,25 @@ type CalendarEvent = {
   };
 };
 
+type PublicHolidayEvent = {
+  id: string;
+  title: string;
+  start: string;
+  end?: string;
+  display?: string;
+  backgroundColor?: string;
+  borderColor?: string;
+  extendedProps: {
+    kind: "publicHoliday";
+    countryCode: string;
+    localName: string;
+    name: string;
+  };
+};
+
+type SelectedLeave = LeaveEvent;
+type SelectedHoliday = PublicHolidayEvent;
+
 export function VacationCalendar({
   teams,
   initialTeamId,
@@ -34,7 +58,9 @@ export function VacationCalendar({
   initialTeamId?: string;
 }) {
   const [teamId, setTeamId] = useState(initialTeamId ?? "");
-  const [selected, setSelected] = useState<CalendarEvent | null>(null);
+  const [holidayCountryCode, setHolidayCountryCode] = useState("");
+  const [selectedLeave, setSelectedLeave] = useState<SelectedLeave | null>(null);
+  const [selectedHoliday, setSelectedHoliday] = useState<SelectedHoliday | null>(null);
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
@@ -52,30 +78,49 @@ export function VacationCalendar({
         end: info.endStr,
       });
       if (teamId) params.set("teamId", teamId);
+      if (holidayCountryCode) params.set("countryCode", holidayCountryCode);
 
       const res = await fetch(`/api/calendar?${params}`);
       if (!res.ok) return [];
       return res.json();
     },
-    [teamId]
+    [teamId, holidayCountryCode]
   );
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
-        <label className="text-sm font-medium text-slate-700">Filter by team</label>
-        <select
-          value={teamId}
-          onChange={(e) => setTeamId(e.target.value)}
-          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm sm:w-auto"
-        >
-          <option value="">All teams</option>
-          {teams.map((team) => (
-            <option key={team.id} value={team.id}>
-              {team.name}
-            </option>
-          ))}
-        </select>
+      <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end sm:gap-6">
+        <label className="block space-y-1 text-sm">
+          <span className="font-medium text-slate-700">Filter by team</span>
+          <select
+            value={teamId}
+            onChange={(e) => setTeamId(e.target.value)}
+            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm sm:w-auto"
+          >
+            <option value="">All teams</option>
+            {teams.map((team) => (
+              <option key={team.id} value={team.id}>
+                {team.name}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className="block space-y-1 text-sm">
+          <span className="font-medium text-slate-700">Show public holidays</span>
+          <select
+            value={holidayCountryCode}
+            onChange={(e) => setHolidayCountryCode(e.target.value)}
+            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm sm:w-auto"
+          >
+            <option value="">None</option>
+            {HOLIDAY_COUNTRY_OPTIONS.map((option) => (
+              <option key={option.code} value={option.code}>
+                {option.code} — {option.label}
+              </option>
+            ))}
+          </select>
+        </label>
       </div>
 
       {teams.length > 0 && (
@@ -89,12 +134,18 @@ export function VacationCalendar({
               {team.name}
             </div>
           ))}
+          {holidayCountryCode && (
+            <div className="flex items-center gap-2 text-sm text-slate-600">
+              <span className="h-4 w-4 shrink-0 rounded bg-slate-200 border border-slate-300" />
+              Public holiday
+            </div>
+          )}
         </div>
       )}
 
       <Card className="overflow-x-auto p-2 sm:p-4">
         <FullCalendar
-          key={`${teamId}-${isMobile ? "mobile" : "desktop"}`}
+          key={`${teamId}-${holidayCountryCode}-${isMobile ? "mobile" : "desktop"}`}
           plugins={[dayGridPlugin, interactionPlugin]}
           initialView="dayGridMonth"
           firstDay={1}
@@ -106,7 +157,26 @@ export function VacationCalendar({
           events={fetchEvents}
           height="auto"
           eventClick={(info) => {
-            setSelected({
+            const props = info.event.extendedProps as
+              | LeaveEvent["extendedProps"]
+              | PublicHolidayEvent["extendedProps"];
+
+            if (props.kind === "publicHoliday") {
+              setSelectedLeave(null);
+              setSelectedHoliday({
+                id: info.event.id,
+                title: info.event.title,
+                start: info.event.startStr,
+                display: info.event.display,
+                backgroundColor: info.event.backgroundColor,
+                borderColor: info.event.borderColor,
+                extendedProps: props,
+              });
+              return;
+            }
+
+            setSelectedHoliday(null);
+            setSelectedLeave({
               id: info.event.id,
               title: info.event.title,
               start: info.event.startStr,
@@ -114,52 +184,87 @@ export function VacationCalendar({
               backgroundColor: info.event.backgroundColor,
               borderColor: info.event.borderColor,
               textColor: info.event.textColor,
-              extendedProps: info.event.extendedProps as CalendarEvent["extendedProps"],
+              extendedProps: props,
             });
           }}
         />
       </Card>
 
-      {selected && (
+      {selectedHoliday && (
+        <Card>
+          <div className="flex items-center gap-2">
+            <span className="h-4 w-4 shrink-0 rounded bg-slate-200 border border-slate-300" />
+            <h3 className="font-semibold text-slate-900">{selectedHoliday.title}</h3>
+          </div>
+          <dl className="mt-3 grid gap-2 text-sm text-slate-600">
+            <div>
+              <dt className="inline font-medium">Date: </dt>
+              <dd className="inline">{selectedHoliday.start}</dd>
+            </div>
+            {selectedHoliday.extendedProps.name &&
+              selectedHoliday.extendedProps.name !== selectedHoliday.title && (
+                <div>
+                  <dt className="inline font-medium">English name: </dt>
+                  <dd className="inline">{selectedHoliday.extendedProps.name}</dd>
+                </div>
+              )}
+            <div>
+              <dt className="inline font-medium">Country: </dt>
+              <dd className="inline">
+                {holidayCountryLabel(selectedHoliday.extendedProps.countryCode)}
+              </dd>
+            </div>
+          </dl>
+          <button
+            type="button"
+            onClick={() => setSelectedHoliday(null)}
+            className="mt-4 text-sm text-brand-600 hover:underline"
+          >
+            Close
+          </button>
+        </Card>
+      )}
+
+      {selectedLeave && (
         <Card>
           <div className="flex items-center gap-2">
             <span
               className="h-4 w-4 shrink-0 rounded"
               style={{
-                backgroundColor: resolveTeamColor(selected.extendedProps.color),
+                backgroundColor: resolveTeamColor(selectedLeave.extendedProps.color),
               }}
             />
             <h3 className="font-semibold text-slate-900">
-              {selected.extendedProps.userName ?? selected.extendedProps.userEmail}
+              {selectedLeave.extendedProps.userName ?? selectedLeave.extendedProps.userEmail}
             </h3>
           </div>
           <dl className="mt-3 grid gap-2 text-sm text-slate-600">
             <div>
               <dt className="inline font-medium">Dates: </dt>
               <dd className="inline">
-                {selected.start} → {new Date(new Date(selected.end).getTime() - 86400000)
+                {selectedLeave.start} → {new Date(new Date(selectedLeave.end).getTime() - 86400000)
                   .toISOString()
                   .slice(0, 10)}
               </dd>
             </div>
             <div>
               <dt className="inline font-medium">Duration: </dt>
-              <dd className="inline">{formatDayLabel(selected.extendedProps.days)}</dd>
+              <dd className="inline">{formatDayLabel(selectedLeave.extendedProps.days)}</dd>
             </div>
             <div>
               <dt className="inline font-medium">Team(s): </dt>
-              <dd className="inline">{selected.extendedProps.teams || "—"}</dd>
+              <dd className="inline">{selectedLeave.extendedProps.teams || "—"}</dd>
             </div>
-            {selected.extendedProps.note && (
+            {selectedLeave.extendedProps.note && (
               <div>
                 <dt className="inline font-medium">Note: </dt>
-                <dd className="inline">{selected.extendedProps.note}</dd>
+                <dd className="inline">{selectedLeave.extendedProps.note}</dd>
               </div>
             )}
           </dl>
           <button
             type="button"
-            onClick={() => setSelected(null)}
+            onClick={() => setSelectedLeave(null)}
             className="mt-4 text-sm text-brand-600 hover:underline"
           >
             Close

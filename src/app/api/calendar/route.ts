@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
+import { isValidHolidayCountryCode } from "@/lib/holiday-country-options";
 import { prisma } from "@/lib/prisma";
+import {
+  getPublicHolidaysInRange,
+  publicHolidayCalendarEvents,
+} from "@/lib/public-holidays";
 import { resolveTeamColor, TEAM_EVENT_TEXT_COLOR } from "@/lib/team-colors";
 
 export async function GET(request: Request) {
@@ -13,6 +18,7 @@ export async function GET(request: Request) {
   const start = searchParams.get("start");
   const end = searchParams.get("end");
   const teamId = searchParams.get("teamId");
+  const countryCode = searchParams.get("countryCode");
 
   const where: {
     status: "APPROVED";
@@ -48,7 +54,7 @@ export async function GET(request: Request) {
     orderBy: { startDate: "asc" },
   });
 
-  const events = requests.map((req) => {
+  const leaveEvents = requests.map((req) => {
     const memberships = req.user.teamMemberships;
     const primaryMembership = teamId
       ? memberships.find((m) => m.teamId === teamId) ?? memberships[0]
@@ -65,6 +71,7 @@ export async function GET(request: Request) {
       borderColor: color,
       textColor: TEAM_EVENT_TEXT_COLOR,
       extendedProps: {
+        kind: "leave" as const,
         userId: req.user.id,
         userName: req.user.name,
         userEmail: req.user.email,
@@ -76,5 +83,14 @@ export async function GET(request: Request) {
     };
   });
 
-  return NextResponse.json(events);
+  if (!countryCode || !isValidHolidayCountryCode(countryCode) || !start || !end) {
+    return NextResponse.json(leaveEvents);
+  }
+
+  const rangeStart = new Date(start);
+  const rangeEnd = new Date(end);
+  const holidays = await getPublicHolidaysInRange(countryCode, rangeStart, rangeEnd);
+  const holidayEvents = publicHolidayCalendarEvents(countryCode, holidays);
+
+  return NextResponse.json([...holidayEvents, ...leaveEvents]);
 }

@@ -17,17 +17,24 @@ export async function setUserAllowance(formData: FormData): Promise<void> {
   const email = (formData.get("email") as string)?.trim().toLowerCase();
   const year = Number(formData.get("year"));
   const days = Number(formData.get("days"));
+  const holidayCountryCode = (formData.get("holidayCountryCode") as string)?.trim() || null;
 
   if (!email || !Number.isFinite(year) || !Number.isFinite(days) || days < 0) return;
 
   const user = await prisma.user.findUnique({ where: { email } });
   if (!user) return;
 
-  await prisma.userAllowance.upsert({
-    where: { userId_year: { userId: user.id, year } },
-    update: { days },
-    create: { userId: user.id, year, days },
-  });
+  await prisma.$transaction([
+    prisma.userAllowance.upsert({
+      where: { userId_year: { userId: user.id, year } },
+      update: { days },
+      create: { userId: user.id, year, days },
+    }),
+    prisma.user.update({
+      where: { id: user.id },
+      data: { holidayCountryCode },
+    }),
+  ]);
 
   revalidatePath("/admin");
 }

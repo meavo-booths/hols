@@ -6,6 +6,7 @@ import { getManagedTeamIds, isAdmin } from "@/lib/permissions";
 import { clearUserAllowance, setUserAllowance } from "@/app/actions/admin";
 import { resolveTeamColor } from "@/lib/team-colors";
 import { VACATION_TRACKER_CARD_ID } from "@/lib/vacation-tracker";
+import { HOLIDAY_COUNTRY_OPTIONS, holidayCountryLabel } from "@/lib/holiday-country-options";
 import { Button, Card, Input, PageHeader, Select } from "@/components/ui";
 
 export default async function AdminPage() {
@@ -25,7 +26,9 @@ export default async function AdminPage() {
     where: admin ? undefined : { id: { in: managedTeamIds } },
     include: {
       members: {
-        include: { user: { select: { id: true, name: true, email: true } } },
+        include: {
+          user: { select: { id: true, name: true, email: true, holidayCountryCode: true } },
+        },
       },
     },
     orderBy: { name: "asc" },
@@ -35,7 +38,9 @@ export default async function AdminPage() {
     ? await Promise.all([
         prisma.userAllowance.findMany({
           where: { year },
-          include: { user: { select: { name: true, email: true } } },
+          include: {
+            user: { select: { name: true, email: true, holidayCountryCode: true } },
+          },
           orderBy: { updatedAt: "desc" },
         }),
         prisma.user.findMany({
@@ -43,7 +48,7 @@ export default async function AdminPage() {
             cardAccess: { some: { cardId: VACATION_TRACKER_CARD_ID } },
           },
           orderBy: { name: "asc" },
-          select: { name: true, email: true },
+          select: { name: true, email: true, holidayCountryCode: true },
         }),
       ])
     : [[], []];
@@ -72,9 +77,10 @@ export default async function AdminPage() {
         <Card>
           <h2 className="text-lg font-semibold text-slate-900">Individual allowance override</h2>
           <p className="mt-1 text-sm text-slate-500">
-            Overrides the team default for a specific person and year.
+            Overrides the team default for a specific person and year. Location excludes that
+            country&apos;s national public holidays from day counts for new requests.
           </p>
-          <form action={setUserAllowance} className="mt-4 grid gap-4 sm:grid-cols-4">
+          <form action={setUserAllowance} className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
             <Select
               label="User"
               name="email"
@@ -84,6 +90,17 @@ export default async function AdminPage() {
                 label: u.name ? `${u.name} (${u.email})` : u.email,
               }))}
             />
+            <Select
+              label="Location"
+              name="holidayCountryCode"
+              options={[
+                { value: "", label: "None" },
+                ...HOLIDAY_COUNTRY_OPTIONS.map((option) => ({
+                  value: option.code,
+                  label: `${option.code} — ${option.label}`,
+                })),
+              ]}
+            />
             <Input label="Year" name="year" type="number" defaultValue={year} required />
             <Input label="Days" name="days" type="number" min={0} required />
             <div className="flex items-end">
@@ -92,6 +109,10 @@ export default async function AdminPage() {
               </Button>
             </div>
           </form>
+          <p className="mt-2 text-xs text-slate-400">
+            Does not change already-approved requests. Location is saved on the user whenever you
+            submit this form.
+          </p>
 
           {allowances.length > 0 && (
             <ul className="mt-6 divide-y divide-slate-100">
@@ -99,6 +120,12 @@ export default async function AdminPage() {
                 <li key={a.id} className="flex items-center justify-between py-3 text-sm">
                   <span>
                     {a.user.name ?? a.user.email} — {a.year}: {a.days} days
+                    {a.user.holidayCountryCode && (
+                      <span className="text-slate-500">
+                        {" "}
+                        · {holidayCountryLabel(a.user.holidayCountryCode)}
+                      </span>
+                    )}
                   </span>
                   <form action={clearUserAllowance.bind(null, a.id)}>
                     <Button type="submit" variant="ghost">
@@ -154,6 +181,12 @@ export default async function AdminPage() {
                         <span className="text-slate-400">
                           ({member.role === "MANAGER" ? "Manager" : "Member"})
                         </span>
+                        {member.user.holidayCountryCode && (
+                          <span className="text-slate-400">
+                            {" "}
+                            · {holidayCountryLabel(member.user.holidayCountryCode)}
+                          </span>
+                        )}
                         {balance && (
                           <span className="ml-2 text-emerald-600">
                             · {balance.remaining} day{balance.remaining !== 1 ? "s" : ""} remaining

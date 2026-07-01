@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { calculateRequestDays } from "@/lib/dates";
 import type { RequestDuration } from "@/lib/days-format";
+import { getPublicHolidayDateSet } from "@/lib/public-holidays";
 
 export async function getYearlyAllowance(userId: string, year: number): Promise<number> {
   const individual = await prisma.userAllowance.findUnique({
@@ -44,6 +45,24 @@ export async function getRemainingDays(userId: string, year: number): Promise<{
   return { allowance, used, remaining: Math.max(0, allowance - used) };
 }
 
+export async function calculateRequestDaysForUser(
+  userId: string,
+  startDate: Date,
+  endDate: Date,
+  duration: RequestDuration
+): Promise<{ ok: true; days: number } | { ok: false; error: string }> {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { holidayCountryCode: true },
+  });
+
+  const holidayDates = user?.holidayCountryCode
+    ? await getPublicHolidayDateSet(user.holidayCountryCode, startDate, endDate)
+    : new Set<string>();
+
+  return calculateRequestDays(startDate, endDate, duration, holidayDates);
+}
+
 export async function validateRequestDays(
   userId: string,
   startDate: Date,
@@ -51,7 +70,7 @@ export async function validateRequestDays(
   excludeRequestId?: string,
   duration: RequestDuration = "full"
 ): Promise<{ ok: true; days: number } | { ok: false; error: string }> {
-  const calculated = calculateRequestDays(startDate, endDate, duration);
+  const calculated = await calculateRequestDaysForUser(userId, startDate, endDate, duration);
   if (!calculated.ok) return calculated;
 
   const { days } = calculated;
