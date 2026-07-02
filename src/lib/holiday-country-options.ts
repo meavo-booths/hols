@@ -25,6 +25,7 @@ export const HOLIDAY_COUNTRY_OPTIONS: HolidayCountryOption[] = [
   { code: "SE", label: "Sweden" },
   { code: "SK", label: "Slovakia" },
   { code: "SI", label: "Slovenia" },
+  { code: "US", label: "United States" },
 ];
 
 const VALID_CODES = new Set(HOLIDAY_COUNTRY_OPTIONS.map((option) => option.code));
