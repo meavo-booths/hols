@@ -16,11 +16,11 @@
     "db:setup:preview": "bash scripts/setup-preview-db.sh"
   },
   "dependencies": {
-    "@meavo/navigation": "git+https://github.com/meavo-booths/meavo-navigation.git#v0.1.0",
     "@fullcalendar/core": "^6.1.15",
     "@fullcalendar/daygrid": "^6.1.15",
     "@fullcalendar/interaction": "^6.1.15",
     "@fullcalendar/react": "^6.1.15",
+    "@meavo/navigation": "github:meavo-booths/meavo-navigation#v0.1.1",
     "@prisma/client": "^6.1.0",
     "@vercel/analytics": "^2.0.1",
     "@vercel/speed-insights": "^2.0.0",
