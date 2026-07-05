@@ -9,13 +9,17 @@
     "start": "next start",
     "lint": "next lint",
     "db:generate": "prisma generate",
-    "db:push": "prisma db push",
+    "db:push": "echo 'db:push is disabled. The shared schema lives in the meavo-db repo (github.com/meavo-booths/meavo-db) — make changes there.' && exit 1",
     "db:studio": "prisma studio",
     "db:seed": "tsx prisma/seed.ts",
     "db:setup": "bash scripts/setup-shared-db.sh",
     "db:setup:preview": "bash scripts/setup-preview-db.sh"
   },
+  "prisma": {
+    "schema": "node_modules/@meavo/db/prisma/schema.prisma"
+  },
   "dependencies": {
+    "@meavo/db": "git+https://github.com/meavo-booths/meavo-db.git#v0.1.0",
     "@fullcalendar/core": "^6.1.15",
     "@fullcalendar/daygrid": "^6.1.15",
     "@fullcalendar/interaction": "^6.1.15",

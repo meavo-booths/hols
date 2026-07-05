@@ -28,7 +28,7 @@ export async function notifySlackNewVacationRequest(requestId: string): Promise<
         select: {
           name: true,
           email: true,
-          teamMemberships: {
+          teamMembers: {
             orderBy: { createdAt: "asc" },
             take: 1,
             include: { team: { select: { name: true } } },
@@ -41,7 +41,7 @@ export async function notifySlackNewVacationRequest(requestId: string): Promise<
   if (!request) return;
 
   const displayName = request.user.name ?? request.user.email;
-  const teamName = request.user.teamMemberships[0]?.team.name ?? "No team";
+  const teamName = request.user.teamMembers[0]?.team.name ?? "No team";
   const dateRange = formatRequestDates(request.startDate, request.endDate);
   const daysLabel = formatDayLabel(request.days);
   const approvalsUrl = `${getAppUrl()}/approvals`;

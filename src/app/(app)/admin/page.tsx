@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { getRemainingDays } from "@/lib/allowance";
+import { getRemainingDaysForUsers } from "@/lib/allowance";
 import { getManagedTeamIds, isAdmin } from "@/lib/permissions";
 import { clearUserAllowance, setUserAllowance } from "@/app/actions/admin";
 import { resolveTeamColor } from "@/lib/team-colors";
@@ -56,11 +56,7 @@ export default async function AdminPage() {
   const memberUserIds = [
     ...new Set(teams.flatMap((team) => team.members.map((member) => member.user.id))),
   ];
-  const allowanceByUserId = Object.fromEntries(
-    await Promise.all(
-      memberUserIds.map(async (id) => [id, await getRemainingDays(id, year)] as const)
-    )
-  );
+  const allowanceByUserId = await getRemainingDaysForUsers(memberUserIds, year);
 
   return (
     <div className="space-y-8">

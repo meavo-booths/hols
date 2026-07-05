@@ -53,6 +53,8 @@ export function Input({
   name,
   type = "text",
   defaultValue,
+  value,
+  onChange,
   required,
   min,
   max,
@@ -63,9 +65,11 @@ export function Input({
   name: string;
   type?: string;
   defaultValue?: string | number;
+  value?: string;
+  onChange?: (value: string) => void;
   required?: boolean;
-  min?: number;
-  max?: number;
+  min?: number | string;
+  max?: number | string;
   placeholder?: string;
   autoComplete?: string;
 }) {
@@ -76,6 +80,8 @@ export function Input({
         name={name}
         type={type}
         defaultValue={defaultValue}
+        value={value}
+        onChange={onChange ? (event) => onChange(event.target.value) : undefined}
         required={required}
         min={min}
         max={max}

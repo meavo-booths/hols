@@ -117,6 +117,27 @@ export async function getPublicHolidaysInRange(
     await ensurePublicHolidaysForYear(countryCode, year);
   }
 
+  return getCachedPublicHolidaysInRange(countryCode, start, end);
+}
+
+/**
+ * Reads cached holidays only — no external API calls. Used on hot read paths
+ * (calendar GET); the cache is kept warm by the sync-holidays cron and by
+ * request-creation flows that call getPublicHolidaysInRange.
+ */
+export async function getCachedPublicHolidaysInRange(
+  countryCode: string,
+  start: Date,
+  end: Date
+): Promise<
+  {
+    date: Date;
+    localName: string;
+    name: string;
+  }[]
+> {
+  if (!isValidHolidayCountryCode(countryCode)) return [];
+
   const rangeStart = new Date(start.getFullYear(), start.getMonth(), start.getDate());
   const rangeEnd = new Date(end.getFullYear(), end.getMonth(), end.getDate());
 
@@ -132,6 +153,35 @@ export async function getPublicHolidaysInRange(
       name: true,
     },
   });
+}
+
+/**
+ * Warms the public-holiday cache for every country code currently assigned to
+ * a user, for the current and next year. Called from the sync-holidays cron.
+ */
+export async function syncPublicHolidays(): Promise<{
+  countries: string[];
+  years: number[];
+}> {
+  const usersWithCountry = await prisma.user.findMany({
+    where: { holidayCountryCode: { not: null } },
+    select: { holidayCountryCode: true },
+    distinct: ["holidayCountryCode"],
+  });
+  const countries = usersWithCountry
+    .map((user) => user.holidayCountryCode)
+    .filter((code): code is string => isValidHolidayCountryCode(code));
+
+  const currentYear = new Date().getFullYear();
+  const years = [currentYear, currentYear + 1];
+
+  for (const countryCode of countries) {
+    for (const year of years) {
+      await ensurePublicHolidaysForYear(countryCode, year);
+    }
+  }
+
+  return { countries, years };
 }
 
 export async function getPublicHolidayDateSet(

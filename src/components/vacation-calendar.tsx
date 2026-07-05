@@ -62,6 +62,7 @@ export function VacationCalendar({
   const [selectedLeave, setSelectedLeave] = useState<SelectedLeave | null>(null);
   const [selectedHoliday, setSelectedHoliday] = useState<SelectedHoliday | null>(null);
   const [isMobile, setIsMobile] = useState(false);
+  const [loadError, setLoadError] = useState(false);
 
   useEffect(() => {
     const media = window.matchMedia("(max-width: 639px)");
@@ -80,15 +81,29 @@ export function VacationCalendar({
       if (teamId) params.set("teamId", teamId);
       if (holidayCountryCode) params.set("countryCode", holidayCountryCode);
 
-      const res = await fetch(`/api/calendar?${params}`);
-      if (!res.ok) return [];
-      return res.json();
+      try {
+        const res = await fetch(`/api/calendar?${params}`);
+        if (!res.ok) {
+          setLoadError(true);
+          return [];
+        }
+        setLoadError(false);
+        return await res.json();
+      } catch {
+        setLoadError(true);
+        return [];
+      }
     },
     [teamId, holidayCountryCode]
   );
 
   return (
     <div className="space-y-4">
+      {loadError && (
+        <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+          The calendar could not be loaded. Check your connection and try refreshing the page.
+        </p>
+      )}
       <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end sm:gap-6">
         <label className="block space-y-1 text-sm">
           <span className="font-medium text-slate-700">Filter by team</span>

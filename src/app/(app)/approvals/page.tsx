@@ -14,7 +14,7 @@ const requestInclude = {
     select: {
       name: true,
       email: true,
-      teamMemberships: { include: { team: true } },
+      teamMembers: { include: { team: true } },
     },
   },
   reviewedBy: {
@@ -27,7 +27,7 @@ function teamScope(admin: boolean, managedTeamIds: string[]) {
     ? {}
     : {
         user: {
-          teamMemberships: { some: { teamId: { in: managedTeamIds } } },
+          teamMembers: { some: { teamId: { in: managedTeamIds } } },
         },
       };
 }
@@ -103,7 +103,7 @@ export default async function ApprovalsPage() {
                     </p>
                     <p className="text-xs text-slate-500">
                       Team:{" "}
-                      {req.user.teamMemberships.map((m) => m.team.name).join(", ") || "—"}
+                      {req.user.teamMembers.map((m) => m.team.name).join(", ") || "—"}
                     </p>
                     {req.note && <p className="mt-1 text-sm text-slate-600">{req.note}</p>}
                   </div>
@@ -156,7 +156,7 @@ export default async function ApprovalsPage() {
                     </p>
                     <p className="text-xs text-slate-500">
                       Team:{" "}
-                      {req.user.teamMemberships.map((m) => m.team.name).join(", ") || "—"}
+                      {req.user.teamMembers.map((m) => m.team.name).join(", ") || "—"}
                     </p>
                     {req.note && <p className="mt-1 text-sm text-slate-600">{req.note}</p>}
                     <p className="mt-1 text-xs text-slate-500">

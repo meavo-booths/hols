@@ -8,11 +8,6 @@ import { prisma } from "@/lib/prisma";
 import { verifyPassword } from "@/lib/password";
 import { VACATION_TRACKER_CARD_ID } from "@/lib/vacation-tracker";
 
-const adminEmails = (process.env.ADMIN_EMAILS ?? "")
-  .split(",")
-  .map((e) => e.trim().toLowerCase())
-  .filter(Boolean);
-
 const googleProvider =
   isGoogleAuthEnabled()
     ? Google({
@@ -49,13 +44,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           },
         });
         if (!hasAccess) return null;
-
-        if (adminEmails.includes(email) && user.systemRole !== SystemRole.ADMIN) {
-          await prisma.user.update({
-            where: { id: user.id },
-            data: { systemRole: SystemRole.ADMIN },
-          });
-        }
 
         return {
           id: user.id,
@@ -94,14 +82,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         return "/login?error=NotInvited";
       }
 
-      const email = user.email?.trim().toLowerCase();
-      if (email && adminEmails.includes(email)) {
-        await prisma.user.update({
-          where: { id: user.id },
-          data: { systemRole: SystemRole.ADMIN },
-        });
-      }
-
+      // Admin role is managed exclusively via the gateway admin UI.
       return true;
     },
     async jwt({ token, user }) {

@@ -1,16 +1,17 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { requireHolsUser } from "@/lib/access";
 import { isValidHolidayCountryCode } from "@/lib/holiday-country-options";
 import { prisma } from "@/lib/prisma";
 import {
-  getPublicHolidaysInRange,
+  getCachedPublicHolidaysInRange,
   publicHolidayCalendarEvents,
 } from "@/lib/public-holidays";
 import { resolveTeamColor, TEAM_EVENT_TEXT_COLOR } from "@/lib/team-colors";
 
 export async function GET(request: Request) {
-  const session = await auth();
-  if (!session?.user?.id) {
+  try {
+    await requireHolsUser();
+  } catch {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -24,7 +25,7 @@ export async function GET(request: Request) {
     status: "APPROVED";
     startDate?: { lte: Date };
     endDate?: { gte: Date };
-    user?: { teamMemberships: { some: { teamId: string } } };
+    user?: { teamMembers: { some: { teamId: string } } };
   } = { status: "APPROVED" };
 
   if (start && end) {
@@ -33,7 +34,7 @@ export async function GET(request: Request) {
   }
 
   if (teamId) {
-    where.user = { teamMemberships: { some: { teamId } } };
+    where.user = { teamMembers: { some: { teamId } } };
   }
 
   const requests = await prisma.vacationRequest.findMany({
@@ -44,7 +45,7 @@ export async function GET(request: Request) {
           id: true,
           name: true,
           email: true,
-          teamMemberships: {
+          teamMembers: {
             include: { team: true },
             orderBy: { createdAt: "asc" },
           },
@@ -55,7 +56,7 @@ export async function GET(request: Request) {
   });
 
   const leaveEvents = requests.map((req) => {
-    const memberships = req.user.teamMemberships;
+    const memberships = req.user.teamMembers;
     const primaryMembership = teamId
       ? memberships.find((m) => m.teamId === teamId) ?? memberships[0]
       : memberships[0];
@@ -89,7 +90,9 @@ export async function GET(request: Request) {
 
   const rangeStart = new Date(start);
   const rangeEnd = new Date(end);
-  const holidays = await getPublicHolidaysInRange(countryCode, rangeStart, rangeEnd);
+  // Cached read only — the sync-holidays cron keeps the cache warm, so the
+  // calendar GET never blocks on the external holidays API.
+  const holidays = await getCachedPublicHolidaysInRange(countryCode, rangeStart, rangeEnd);
   const holidayEvents = publicHolidayCalendarEvents(countryCode, holidays);
 
   return NextResponse.json([...holidayEvents, ...leaveEvents]);

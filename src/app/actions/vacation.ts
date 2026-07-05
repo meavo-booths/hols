@@ -1,8 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { requireHolsUser } from "@/lib/access";
 import { parseDateInput } from "@/lib/dates";
 import type { RequestDuration } from "@/lib/days-format";
 import { inferRequestDuration } from "@/lib/days-format";
@@ -12,9 +12,7 @@ import { notifySlackNewVacationRequest } from "@/lib/slack";
 import { enqueueNotification } from "@/lib/notifications/enqueue";
 
 async function requireUser() {
-  const session = await auth();
-  if (!session?.user?.id) throw new Error("Unauthorized");
-  return session.user;
+  return requireHolsUser();
 }
 
 export async function createVacationRequest(formData: FormData) {
@@ -27,18 +25,42 @@ export async function createVacationRequest(formData: FormData) {
       : parseDateInput(formData.get("endDate") as string);
   const note = (formData.get("note") as string) || null;
 
-  const validation = await validateRequestDays(user.id, startDate, endDate, undefined, duration);
-  if (!validation.ok) return { error: validation.error };
+  // Serializable transaction: validation and insert are atomic, so two
+  // concurrent submissions can't both pass the allowance/overlap checks.
+  let outcome: { error: string } | { request: { id: string } };
+  try {
+    outcome = await prisma.$transaction(
+      async (tx) => {
+        const validation = await validateRequestDays(
+          user.id,
+          startDate,
+          endDate,
+          undefined,
+          duration,
+          tx
+        );
+        if (!validation.ok) return { error: validation.error };
 
-  const request = await prisma.vacationRequest.create({
-    data: {
-      userId: user.id,
-      startDate,
-      endDate,
-      days: validation.days,
-      note,
-    },
-  });
+        const request = await tx.vacationRequest.create({
+          data: {
+            userId: user.id,
+            startDate,
+            endDate,
+            days: validation.days,
+            note,
+          },
+        });
+        return { request };
+      },
+      { isolationLevel: "Serializable" }
+    );
+  } catch (err) {
+    console.error("Vacation request creation failed:", err);
+    return { error: "Could not submit the request. Please try again." };
+  }
+
+  if ("error" in outcome) return { error: outcome.error };
+  const { request } = outcome;
 
   void notifySlackNewVacationRequest(request.id).catch((err) => {
     console.error("Slack notification failed:", err);
@@ -94,31 +116,48 @@ export async function reviewVacationRequest(
   const allowed = await canReviewRequest(user.id, request.userId);
   if (!allowed) return { error: "You are not allowed to review this request." };
 
-  if (action === "approve") {
-    const duration = inferRequestDuration(
-      request.startDate,
-      request.endDate,
-      request.days
-    );
-    const validation = await validateRequestDays(
-      request.userId,
-      request.startDate,
-      request.endDate,
-      requestId,
-      duration
-    );
-    if (!validation.ok) return { error: validation.error };
-  }
+  // Serializable transaction: re-check the request is still PENDING and
+  // re-validate allowance atomically, so concurrent approvals can't
+  // double-approve or overshoot the allowance.
+  try {
+    const outcome = await prisma.$transaction(
+      async (tx) => {
+        const fresh = await tx.vacationRequest.findUnique({ where: { id: requestId } });
+        if (!fresh || fresh.status !== "PENDING") {
+          return { error: "Request not found or already reviewed." };
+        }
 
-  await prisma.vacationRequest.update({
-    where: { id: requestId },
-    data: {
-      status: action === "approve" ? "APPROVED" : "REJECTED",
-      reviewedById: user.id,
-      reviewedAt: new Date(),
-      reviewNote: reviewNote || null,
-    },
-  });
+        if (action === "approve") {
+          const duration = inferRequestDuration(fresh.startDate, fresh.endDate, fresh.days);
+          const validation = await validateRequestDays(
+            fresh.userId,
+            fresh.startDate,
+            fresh.endDate,
+            requestId,
+            duration,
+            tx
+          );
+          if (!validation.ok) return { error: validation.error };
+        }
+
+        await tx.vacationRequest.update({
+          where: { id: requestId },
+          data: {
+            status: action === "approve" ? "APPROVED" : "REJECTED",
+            reviewedById: user.id,
+            reviewedAt: new Date(),
+            reviewNote: reviewNote || null,
+          },
+        });
+        return { success: true as const };
+      },
+      { isolationLevel: "Serializable" }
+    );
+    if ("error" in outcome) return { error: outcome.error };
+  } catch (err) {
+    console.error("Vacation request review failed:", err);
+    return { error: "Could not process the review. Please try again." };
+  }
 
   void enqueueNotification({
     sourceApp: "hols",

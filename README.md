@@ -13,14 +13,19 @@ Hol s and gateway share one Neon Postgres database:
 
 Set hols `DATABASE_URL` to the **same connection string** as meavo-gateway on Vercel.
 
+**Schema changes are managed exclusively in the [meavo-db repo](https://github.com/meavo-booths/meavo-db).**
+This app consumes `@meavo/db` (the canonical schema) and only runs `prisma generate`.
+`db:push` is disabled here — pushing from any single app's schema would drop the
+other apps' tables in the shared database.
+
 First-time setup after linking databases:
 
 ```bash
-# From meavo-gateway (creates users, teams, tool cards)
-npm run db:setup
-
-# From hols (adds VacationRequest, UserAllowance tables)
+# From meavo-db (applies the canonical schema)
 npm run db:push
+
+# From meavo-gateway (seeds users, teams, tool cards)
+npm run db:seed
 ```
 
 Users need the **Vacation Tracker** tool card on gateway before they can sign in here.
@@ -61,7 +66,7 @@ Edit `.env`:
 ### 3. Initialize the database
 
 ```bash
-npm run db:push
+# Apply the schema from the meavo-db repo first (npm run db:push there), then:
 npm run db:generate
 npm run db:seed
 ```

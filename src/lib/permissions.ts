@@ -28,6 +28,9 @@ export async function canReviewRequest(
   reviewerId: string,
   requesterId: string
 ): Promise<boolean> {
+  // Nobody may review their own request, including admins.
+  if (reviewerId === requesterId) return false;
+
   if (await isAdmin(reviewerId)) return true;
 
   const requesterTeams = await prisma.teamMember.findMany({
