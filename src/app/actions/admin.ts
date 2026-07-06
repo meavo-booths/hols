@@ -1,19 +1,22 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { auth } from "@/lib/auth";
+import { getHolsUser } from "@/lib/access";
 import { prisma } from "@/lib/prisma";
 import { isAdmin } from "@/lib/permissions";
 
-async function requireAdmin() {
-  const session = await auth();
-  if (!session?.user?.id) throw new Error("Unauthorized");
-  if (!(await isAdmin(session.user.id))) throw new Error("Forbidden");
-  return session.user;
+async function getAdminUser() {
+  const access = await getHolsUser();
+  if (!access.ok) return access;
+  if (!(await isAdmin(access.user.id))) {
+    return { ok: false as const, error: "You are not allowed to perform this action." };
+  }
+  return { ok: true as const, user: access.user };
 }
 
 export async function setUserAllowance(formData: FormData): Promise<void> {
-  await requireAdmin();
+  const access = await getAdminUser();
+  if (!access.ok) return;
   const email = (formData.get("email") as string)?.trim().toLowerCase();
   const year = Number(formData.get("year"));
   const daysRaw = (formData.get("days") as string)?.trim() ?? "";
@@ -52,7 +55,8 @@ export async function setUserAllowance(formData: FormData): Promise<void> {
 }
 
 export async function clearUserAllowance(allowanceId: string): Promise<void> {
-  await requireAdmin();
+  const access = await getAdminUser();
+  if (!access.ok) return;
   await prisma.userAllowance.delete({ where: { id: allowanceId } });
   revalidatePath("/admin");
 }

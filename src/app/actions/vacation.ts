@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { requireHolsUser } from "@/lib/access";
+import { getHolsUser } from "@/lib/access";
 import { parseDateInput } from "@/lib/dates";
 import type { RequestDuration } from "@/lib/days-format";
 import { inferRequestDuration } from "@/lib/days-format";
@@ -11,12 +11,10 @@ import { canReviewRequest } from "@/lib/permissions";
 import { notifySlackNewVacationRequest } from "@/lib/slack";
 import { enqueueNotification } from "@/lib/notifications/enqueue";
 
-async function requireUser() {
-  return requireHolsUser();
-}
-
 export async function createVacationRequest(formData: FormData) {
-  const user = await requireUser();
+  const access = await getHolsUser();
+  if (!access.ok) return { error: access.error };
+  const user = access.user;
   const duration = (formData.get("duration") as RequestDuration) === "half" ? "half" : "full";
   const startDate = parseDateInput(formData.get("startDate") as string);
   const endDate =
@@ -82,7 +80,9 @@ export async function createVacationRequest(formData: FormData) {
 }
 
 export async function cancelVacationRequest(requestId: string): Promise<void> {
-  const user = await requireUser();
+  const access = await getHolsUser();
+  if (!access.ok) return;
+  const user = access.user;
   const request = await prisma.vacationRequest.findUnique({
     where: { id: requestId },
   });
@@ -104,7 +104,10 @@ export async function reviewVacationRequest(
   action: "approve" | "reject",
   reviewNote?: string
 ) {
-  const user = await requireUser();
+  const access = await getHolsUser();
+  if (!access.ok) return { error: access.error };
+  const user = access.user;
+
   const request = await prisma.vacationRequest.findUnique({
     where: { id: requestId },
   });
@@ -175,7 +178,9 @@ export async function reviewVacationRequest(
 }
 
 export async function managerRevokeVacationRequest(requestId: string): Promise<void> {
-  const user = await requireUser();
+  const access = await getHolsUser();
+  if (!access.ok) return;
+  const user = access.user;
   const request = await prisma.vacationRequest.findUnique({
     where: { id: requestId },
   });
