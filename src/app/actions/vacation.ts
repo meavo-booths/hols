@@ -79,6 +79,74 @@ export async function createVacationRequest(formData: FormData) {
   return { success: true };
 }
 
+export async function updateVacationRequest(requestId: string, formData: FormData) {
+  const access = await getHolsUser();
+  if (!access.ok) return { error: access.error };
+  const user = access.user;
+
+  const existing = await prisma.vacationRequest.findUnique({
+    where: { id: requestId },
+  });
+  if (!existing || existing.userId !== user.id) {
+    return { error: "Request not found." };
+  }
+  if (existing.status !== "PENDING") {
+    return { error: "Only pending requests can be edited." };
+  }
+
+  const duration = (formData.get("duration") as RequestDuration) === "half" ? "half" : "full";
+  const startDate = parseDateInput(formData.get("startDate") as string);
+  const endDate =
+    duration === "half"
+      ? startDate
+      : parseDateInput(formData.get("endDate") as string);
+  const note = (formData.get("note") as string) || null;
+
+  let outcome: { error: string } | { success: true };
+  try {
+    outcome = await prisma.$transaction(
+      async (tx) => {
+        const fresh = await tx.vacationRequest.findUnique({ where: { id: requestId } });
+        if (!fresh || fresh.userId !== user.id || fresh.status !== "PENDING") {
+          return { error: "Request not found or already reviewed." };
+        }
+
+        const validation = await validateRequestDays(
+          user.id,
+          startDate,
+          endDate,
+          requestId,
+          duration,
+          tx
+        );
+        if (!validation.ok) return { error: validation.error };
+
+        await tx.vacationRequest.update({
+          where: { id: requestId },
+          data: {
+            startDate,
+            endDate,
+            days: validation.days,
+            note,
+          },
+        });
+        return { success: true as const };
+      },
+      { isolationLevel: "Serializable" }
+    );
+  } catch (err) {
+    console.error("Vacation request update failed:", err);
+    return { error: "Could not save the request. Please try again." };
+  }
+
+  if ("error" in outcome) return { error: outcome.error };
+
+  revalidatePath("/");
+  revalidatePath("/requests");
+  revalidatePath("/approvals");
+  return { success: true };
+}
+
 export async function cancelVacationRequest(requestId: string): Promise<void> {
   const access = await getHolsUser();
   if (!access.ok) return;

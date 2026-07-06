@@ -1,10 +1,10 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { cancelVacationRequest } from "@/app/actions/vacation";
-import { Badge, Button, Card, PageHeader } from "@/components/ui";
+import { PendingRequestActions } from "@/components/edit-request-form";
+import { Badge, Card, PageHeader } from "@/components/ui";
 import { toDateInputValue } from "@/lib/dates";
-import { formatDayLabel } from "@/lib/days-format";
+import { formatDayLabel, inferRequestDuration } from "@/lib/days-format";
 
 const statusTone = {
   PENDING: "warning",
@@ -58,11 +58,15 @@ export default async function RequestsPage() {
                 )}
               </div>
               {req.status === "PENDING" && (
-                <form action={cancelVacationRequest.bind(null, req.id)}>
-                  <Button type="submit" variant="secondary">
-                    Cancel
-                  </Button>
-                </form>
+                <PendingRequestActions
+                  requestId={req.id}
+                  initialValues={{
+                    duration: inferRequestDuration(req.startDate, req.endDate, req.days),
+                    startDate: toDateInputValue(req.startDate),
+                    endDate: toDateInputValue(req.endDate),
+                    note: req.note,
+                  }}
+                />
               )}
             </Card>
           ))}
