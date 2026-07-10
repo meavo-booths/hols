@@ -1,0 +1,25 @@
+---
+description: Domain layer patterns for hols (Vacation Tracker)
+globs:
+  - src/lib/**
+---
+
+# Domain module rules
+
+Business logic lives here — **not** in route handlers, React components, or API route files. This repo uses a flat `src/lib/` (no `src/lib/domain/` subfolder).
+
+## Patterns
+
+1. Validation helpers return `{ ok: true, days } | { ok: false, error }` (see `validateRequestDays` in `src/lib/allowance.ts`) — callers surface `error` to the user, never throw for expected failures.
+2. Allowance/day functions accept an optional `db: PrismaClient | Prisma.TransactionClient` parameter so actions can run them inside a `$transaction` — preserve this when adding functions.
+3. Authorization checks live in `src/lib/permissions.ts` (`isAdmin`, `isTeamManager`, `canReviewRequest`) — call them before mutating, never inline role logic.
+4. Day counting goes through `src/lib/dates.ts` (weekends excluded) and `src/lib/allowance.ts` (public holidays via `holidayCountryCode`); do not reimplement day math.
+5. Reuse existing modules — search `src/lib/` before adding new files.
+
+## File naming
+
+Noun-based, one concern per file: `allowance.ts`, `dates.ts`, `permissions.ts`, `public-holidays.ts`, `login-throttle.ts`. Integrations get their own file (`slack.ts`, `notifications/enqueue.ts`).
+
+## Mutation map
+
+See `docs/domain.md` for persona permissions and status transitions.

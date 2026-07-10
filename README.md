@@ -6,7 +6,7 @@ A simple company vacation tracker with teams, manager approvals, per-team and pe
 
 ## Shared database with meavo-gateway
 
-Hol s and gateway share one Neon Postgres database:
+Hols and gateway share one Neon Postgres database:
 
 - **Gateway** (`meavo.app`) — creates users, teams (name, colour, allowance), and tool access
 - **Hols** (`hols.meavo.app`) — vacation requests, approvals, calendar, individual allowance overrides
@@ -29,6 +29,16 @@ npm run db:seed
 ```
 
 Users need the **Vacation Tracker** tool card on gateway before they can sign in here.
+
+## Documentation
+
+| Doc | Contents |
+|-----|----------|
+| [AGENTS.md](AGENTS.md) | Quick orientation for AI agents — task → file map, hard rules, commands |
+| [docs/architecture.md](docs/architecture.md) | Stack, sibling repos, data flow, API surface, env vars |
+| [docs/domain.md](docs/domain.md) | Business rules, request lifecycle, roles, mutation map |
+| [docs/data-model.md](docs/data-model.md) | Database tables (schema owned by [meavo-db](https://github.com/meavo-booths/meavo-db)) |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | PR process, code placement, schema-change workflow |
 
 ## Features
 

@@ -1,0 +1,38 @@
+---
+description: API routes, Server Actions, and HTTP handlers for hols (Vacation Tracker)
+globs:
+  - src/app/api/**
+  - src/app/actions/**
+---
+
+# API & Server Action rules
+
+Keep handlers **thin** — validate input, call `src/lib/*` helpers, map errors to action responses or HTTP status codes.
+
+## Auth
+
+- `getHolsUser()` (returns `{ ok, user | error }`) or `requireHolsUser()` (throws) from `src/lib/access.ts` at the top of every Server Action and API route — checks session AND tool-card access.
+- Admin-only actions additionally check `isAdmin()` (see `getAdminUser()` in `src/app/actions/admin.ts`).
+- Cron routes: verify `Authorization: Bearer ${CRON_SECRET}` (see `src/app/api/cron/sync-holidays/route.ts`).
+- Never import `@/lib/auth` (Prisma-backed) in `src/middleware.ts` — edge runtime; use `@/lib/auth.config`.
+
+## Validation
+
+- Parse `FormData` manually at the boundary; dates via `parseDateInput()` from `src/lib/dates.ts`.
+- Business validation (allowance, overlap, year boundary) via `validateRequestDays()` inside the same Serializable `prisma.$transaction` as the write.
+
+## Responses
+
+- Server Actions return `{ error?: string }` for user-facing failures and `{ success: true }` on success; catch unexpected errors and return a friendly message (never rethrow to the client).
+- Call `revalidatePath()` for every route the write affects (`/`, `/requests`, `/approvals`, `/admin`).
+- Side effects (Slack, `enqueueNotification`) run after the transaction, fire-and-forget with `.catch(console.error)`.
+
+## Cron routes
+
+- `/api/cron/sync-holidays` — daily at 04:15 UTC (`vercel.json`); logic lives in `src/lib/public-holidays.ts`.
+
+## Do NOT
+
+- Put business rules inline in route handlers
+- Skip auth on routes exposed to the internet (`/api/health` is the only intentionally public route)
+- Return stack traces to clients in production
