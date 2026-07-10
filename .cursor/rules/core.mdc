@@ -1,0 +1,59 @@
+---
+description: Core stack, layout, and guardrails for hols (Vacation Tracker)
+alwaysApply: true
+---
+
+Environment: Next.js 15 App Router app at hols.meavo.app (Meavo satellite app). Users/teams/access live in the shared gateway database — this app owns only vacation data.
+
+## Stack
+
+- Next.js 15 App Router, TypeScript strict, React 19
+- Prisma 6 via `@meavo/db` → shared Neon Postgres (same DB as meavo-gateway)
+- NextAuth v5 JWT (Credentials + invite-only Google)
+- Tailwind CSS 3, in-house kit `src/components/ui.tsx`, `@meavo/navigation` nav
+- FullCalendar, date-fns; Vercel hosting + cron; optional Slack webhook
+
+## Do NOT
+
+- Edit the Prisma schema here — schema lives in meavo-db; `npm run db:push` is disabled on purpose
+- Create/edit users, teams, or tool access — gateway owns those; hols reads them
+- Skip `getHolsUser()` / `requireHolsUser()` in Server Actions or API routes
+- Import `@/lib/auth` in `src/middleware.ts` (edge) — use `@/lib/auth.config` only
+- Add shadcn/Radix/MUI or a custom top nav
+- Send email from this app — enqueue to `NotificationOutbox` instead
+- Let Slack/outbox side effects block or fail a mutation
+- Commit secrets or `.env*` files
+
+## Code layout
+
+| Area | Path |
+|------|------|
+| Authenticated pages | `src/app/(app)/` (calendar `page.tsx`, `requests/`, `approvals/`, `admin/`, `profile/`) |
+| Server Actions | `src/app/actions/` (`vacation.ts`, `admin.ts`, `auth.ts`) |
+| API routes | `src/app/api/` (calendar feed, cron, health, NextAuth) |
+| Domain logic | `src/lib/` (`allowance.ts`, `dates.ts`, `permissions.ts`, `public-holidays.ts`) |
+| Auth & access | `src/lib/access.ts`, `src/lib/auth.ts`, `src/lib/auth.config.ts`, `src/middleware.ts` |
+| Integrations | `src/lib/slack.ts`, `src/lib/notifications/enqueue.ts` |
+| UI components | `src/components/` (kit in `ui.tsx`) |
+| Tests | N/A — no test suite |
+
+## Data flow
+
+```
+Browser → Server Action (src/app/actions/*)
+        → getHolsUser() access check
+        → validation + write in one Serializable prisma.$transaction
+        → fire-and-forget: Slack webhook + NotificationOutbox enqueue
+        → revalidatePath() for affected routes
+Calendar UI → GET /api/calendar → approved requests + cached public holidays
+Vercel cron (daily) → /api/cron/sync-holidays → Nager.Date API → PublicHoliday table
+```
+
+Every request write that others should hear about must enqueue `hols.vacation.{requested|approved|rejected}` via `enqueueNotification()`; only gateway sends email.
+
+## Docs for agents
+
+- `AGENTS.md` — quick orientation
+- `docs/architecture.md` — stack, siblings, data flow
+- `docs/domain.md` — business rules, mutation map
+- `docs/data-model.md` — database tables

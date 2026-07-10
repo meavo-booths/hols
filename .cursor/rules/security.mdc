@@ -1,0 +1,46 @@
+---
+description: Meavo security standards for hols (Vacation Tracker)
+alwaysApply: true
+---
+
+# Security rules — Meavo org standard
+
+Org standard (see STANDARDS.md §4 in meavo-agent-templates). Deviations for this repo are listed at the bottom.
+
+## Auth at every layer
+
+- Verify auth independently in: middleware (pages), section layouts, Server Actions, and API routes.
+- Middleware passes `/api/*` through — never assume an API route is protected.
+- This repo's auth gate: `getHolsUser()` / `requireHolsUser()` in `src/lib/access.ts` — call one of them at the top of every Server Action and API route.
+- Tool card gating: check `ToolCardAccess` for `VACATION_TRACKER_CARD_ID` (`seed-vacation-tracker`, constant in `src/lib/vacation-tracker.ts`) at login AND on every authenticated request, so revocation in gateway Admin takes effect immediately. Never look up the card by `linkedAppKey` at runtime.
+
+## Sessions & credentials
+
+- NextAuth v5 JWT sessions; `systemRole` is refreshed from the DB in the session callback (`src/lib/auth.ts`).
+- Passwords: bcryptjs 12 rounds, min 8 chars. Login throttling via shared `LoginThrottle` table (`src/lib/login-throttle.ts`, 10 failures / 15 min per email).
+- Google OAuth is invite-only — user must already exist in the DB.
+
+## Routes & rendering
+
+- Cron routes: `CRON_SECRET` Bearer auth on every `/api/cron/*` handler.
+- `export const dynamic = "force-dynamic"` on authenticated layouts and DB-touching pages.
+- Never return stack traces to clients in production.
+
+## Headers & content
+
+- `next.config.ts` must set: `X-Content-Type-Options: nosniff`, `X-Frame-Options: SAMEORIGIN`, `Referrer-Policy: strict-origin-when-cross-origin`, `Strict-Transport-Security`.
+- Uploads: Vercel Blob, 10 MB limit, validate MIME + extension, stream downloads via authenticated route, sanitize filenames.
+- Embedded HTML: sandboxed same-origin iframe with CSP `sandbox allow-scripts`.
+
+## Secrets
+
+- No secrets in client code, comments, or committed files.
+- Document env var names in `.env.example` only — never values.
+
+## Repo-specific deviations
+
+- Tool-card ID is a hardcoded constant (`src/lib/vacation-tracker.ts`), not an env var like other satellites.
+- Admins (`systemRole === "ADMIN"`) bypass the tool-card check in `getHolsUser()` — see STANDARDS.md §8 on admin-bypass inconsistency; do not extend this pattern.
+- `X-Frame-Options` is `DENY` (stricter than the org's `SAMEORIGIN`).
+- No file uploads or embedded HTML in this app — those rules are currently N/A.
+- Session role fields are refreshed in the session callback rather than the JWT callback (same effect: fresh `systemRole` per request).
