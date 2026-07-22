@@ -4,13 +4,11 @@ import { useCallback, useEffect, useState } from "react";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import interactionPlugin from "@fullcalendar/interaction";
-import { resolveTeamColor } from "@/lib/team-colors";
+import { resolveTeamColor, TEAM_EVENT_TEXT_COLOR } from "@/lib/team-colors";
 import { formatDayLabel } from "@/lib/days-format";
-import {
-  HOLIDAY_COUNTRY_OPTIONS,
-  holidayCountryLabel,
-} from "@/lib/holiday-country-options";
+import { holidayCountryLabel } from "@/lib/holiday-country-options";
 import { Card } from "@/components/ui";
+import { HolidayCountryMultiSelect } from "@/components/holiday-country-multi-select";
 
 type LeaveEvent = {
   id: string;
@@ -57,8 +55,10 @@ export function VacationCalendar({
   teams: { id: string; name: string; color: string }[];
   initialTeamId?: string;
 }) {
-  const [teamId, setTeamId] = useState(initialTeamId ?? "");
-  const [holidayCountryCode, setHolidayCountryCode] = useState("");
+  const [teamIds, setTeamIds] = useState<string[]>(() =>
+    initialTeamId ? [initialTeamId] : []
+  );
+  const [holidayCountryCodes, setHolidayCountryCodes] = useState<string[]>([]);
   const [selectedLeave, setSelectedLeave] = useState<SelectedLeave | null>(null);
   const [selectedHoliday, setSelectedHoliday] = useState<SelectedHoliday | null>(null);
   const [isMobile, setIsMobile] = useState(false);
@@ -72,14 +72,24 @@ export function VacationCalendar({
     return () => media.removeEventListener("change", update);
   }, []);
 
+  const selectedTeamSet = new Set(teamIds);
+
+  const toggleTeam = (teamId: string) => {
+    setTeamIds((current) =>
+      current.includes(teamId)
+        ? current.filter((id) => id !== teamId)
+        : [...current, teamId]
+    );
+  };
+
   const fetchEvents = useCallback(
     async (info: { startStr: string; endStr: string }) => {
       const params = new URLSearchParams({
         start: info.startStr,
         end: info.endStr,
       });
-      if (teamId) params.set("teamId", teamId);
-      if (holidayCountryCode) params.set("countryCode", holidayCountryCode);
+      for (const id of teamIds) params.append("teamId", id);
+      for (const code of holidayCountryCodes) params.append("countryCode", code);
 
       try {
         const res = await fetch(`/api/calendar?${params}`);
@@ -94,8 +104,13 @@ export function VacationCalendar({
         return [];
       }
     },
-    [teamId, holidayCountryCode]
+    [teamIds, holidayCountryCodes]
   );
+
+  const filterKey = `${teamIds.slice().sort().join(",")}-${holidayCountryCodes
+    .slice()
+    .sort()
+    .join(",")}-${isMobile ? "mobile" : "desktop"}`;
 
   return (
     <div className="space-y-4">
@@ -104,54 +119,54 @@ export function VacationCalendar({
           The calendar could not be loaded. Check your connection and try refreshing the page.
         </p>
       )}
-      <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end sm:gap-6">
-        <label className="block space-y-1 text-sm">
-          <span className="font-medium text-slate-700">Filter by team</span>
-          <select
-            value={teamId}
-            onChange={(e) => setTeamId(e.target.value)}
-            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm sm:w-auto"
-          >
-            <option value="">All teams</option>
-            {teams.map((team) => (
-              <option key={team.id} value={team.id}>
+
+      <HolidayCountryMultiSelect
+        selectedCodes={holidayCountryCodes}
+        onChange={setHolidayCountryCodes}
+      />
+
+      {(teams.length > 0 || holidayCountryCodes.length > 0) && (
+        <div className="flex flex-wrap items-center gap-2">
+          {teams.map((team) => {
+            const active = selectedTeamSet.has(team.id);
+            const color = resolveTeamColor(team.color);
+            return (
+              <button
+                key={team.id}
+                type="button"
+                onClick={() => toggleTeam(team.id)}
+                aria-pressed={active}
+                className={`rounded-full border px-3 py-1 text-sm font-medium transition ${
+                  active
+                    ? ""
+                    : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+                }`}
+                style={
+                  active
+                    ? {
+                        backgroundColor: color,
+                        color: TEAM_EVENT_TEXT_COLOR,
+                        borderColor: color,
+                      }
+                    : undefined
+                }
+              >
                 {team.name}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <label className="block space-y-1 text-sm">
-          <span className="font-medium text-slate-700">Show public holidays</span>
-          <select
-            value={holidayCountryCode}
-            onChange={(e) => setHolidayCountryCode(e.target.value)}
-            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm sm:w-auto"
-          >
-            <option value="">None</option>
-            {HOLIDAY_COUNTRY_OPTIONS.map((option) => (
-              <option key={option.code} value={option.code}>
-                {option.code} — {option.label}
-              </option>
-            ))}
-          </select>
-        </label>
-      </div>
-
-      {teams.length > 0 && (
-        <div className="flex flex-wrap gap-4">
-          {teams.map((team) => (
-            <div key={team.id} className="flex items-center gap-2 text-sm text-slate-600">
-              <span
-                className="h-4 w-4 shrink-0 rounded"
-                style={{ backgroundColor: resolveTeamColor(team.color) }}
-              />
-              {team.name}
-            </div>
-          ))}
-          {holidayCountryCode && (
+              </button>
+            );
+          })}
+          {teamIds.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setTeamIds([])}
+              className="text-sm font-medium text-slate-500 hover:text-slate-700 hover:underline"
+            >
+              Clear
+            </button>
+          )}
+          {holidayCountryCodes.length > 0 && (
             <div className="flex items-center gap-2 text-sm text-slate-600">
-              <span className="h-4 w-4 shrink-0 rounded bg-slate-200 border border-slate-300" />
+              <span className="h-4 w-4 shrink-0 rounded border border-slate-300 bg-slate-200" />
               Public holiday
             </div>
           )}
@@ -160,7 +175,7 @@ export function VacationCalendar({
 
       <Card className="overflow-x-auto p-2 sm:p-4">
         <FullCalendar
-          key={`${teamId}-${holidayCountryCode}-${isMobile ? "mobile" : "desktop"}`}
+          key={filterKey}
           plugins={[dayGridPlugin, interactionPlugin]}
           initialView="dayGridMonth"
           firstDay={1}
@@ -208,7 +223,7 @@ export function VacationCalendar({
       {selectedHoliday && (
         <Card>
           <div className="flex items-center gap-2">
-            <span className="h-4 w-4 shrink-0 rounded bg-slate-200 border border-slate-300" />
+            <span className="h-4 w-4 shrink-0 rounded border border-slate-300 bg-slate-200" />
             <h3 className="font-semibold text-slate-900">{selectedHoliday.title}</h3>
           </div>
           <dl className="mt-3 grid gap-2 text-sm text-slate-600">
